@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Portal del Paciente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body class="landing-page">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="container">
+                <div class="row justify-content-center text-center">
+                    <div class="col-lg-8">
+                        <div class="hero-logo mb-4">
+                            <i class="fas fa-paw"></i>
+                        </div>
+                        <h1 class="hero-title">PORTAL DEL PACIENTE</h1>
+                        <p class="hero-subtitle">Consulta la información médica de tu mascota</p>
+                        <p class="hero-description">
+                            Accede al historial médico completo de tu mascota de forma segura y sencilla.
+                        </p>
+                        
+                        <!-- Formulario de búsqueda de cliente -->
+                        <div class="row justify-content-center mt-5">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-search me-2"></i>Buscar Mi Información
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="buscar-cliente-form">
+                                            <div class="mb-3">
+                                                <label class="form-label">Nombre Completo</label>
+                                                <input type="text" class="form-control" id="nombreCompleto" placeholder="Ingresa tu nombre y apellido" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Email (opcional)</label>
+                                                <input type="email" class="form-control" id="emailBusqueda" placeholder="tu@email.com">
+                                            </div>
+                                            <button type="submit" class="btn btn-success w-100">
+                                                <i class="fas fa-search me-1"></i>Buscar Mis Mascotas
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón para volver -->
+                        <div class="mt-4">
+                            <a href="/" class="btn btn-outline-light">
+                                <i class="fas fa-arrow-left me-2"></i>Volver al Inicio
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados Section -->
+    <div class="container mt-5" id="resultados-section" style="display: none;">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-paw me-2"></i>Mis Mascotas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="mascotas-encontradas">
+                            <!-- Aquí se mostrarán las mascotas -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar informe de mascota -->
+    <div class="modal fade" id="informeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-medical me-2"></i>Informe Médico
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="informe-contenido-paciente">
+                        <!-- Aquí se mostrará el informe -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" onclick="imprimirInformePaciente()">
+                        <i class="fas fa-print me-1"></i>Imprimir
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Buscar cliente y sus mascotas
+        document.getElementById('buscar-cliente-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
+            const email = document.getElementById('emailBusqueda').value.trim();
+            
+            if (!nombreCompleto) {
+                alert('Por favor ingresa tu nombre completo');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/paciente/buscar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nombreCompleto: nombreCompleto,
+                        email: email
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.mascotas && data.mascotas.length > 0) {
+                    mostrarMascotas(data.cliente, data.mascotas);
+                } else {
+                    alert('No se encontraron mascotas registradas con esos datos. Verifica tu información o contacta a tu veterinaria.');
+                }
+            } catch (error) {
+                alert('Error de conexión. Por favor intenta nuevamente.');
+            }
+        });
+        
+        // Mostrar mascotas encontradas
+        function mostrarMascotas(cliente, mascotas) {
+            const container = document.getElementById('mascotas-encontradas');
+            const resultadosSection = document.getElementById('resultados-section');
+            
+            let html = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-user me-2"></i>Cliente: ${cliente.nombre} ${cliente.apellido}</h6>
+                    ${cliente.email ? `<p class="mb-0">Email: ${cliente.email}</p>` : ''}
+                    ${cliente.telefono ? `<p class="mb-0">Teléfono: ${cliente.telefono}</p>` : ''}
+                </div>
+                <div class="row">
+            `;
+            
+            mascotas.forEach(mascota => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-paw me-2 text-primary"></i>${mascota.nombre}
+                                </h5>
+                                <p class="card-text">
+                                    <strong>Especie:</strong> ${mascota.especie}<br>
+                                    <strong>Raza:</strong> ${mascota.raza || 'No especificada'}<br>
+                                    <strong>Edad:</strong> ${mascota.edad || 'No especificada'} años<br>
+                                    <strong>Peso:</strong> ${mascota.peso || 'No especificado'} kg
+                                </p>
+                                <button class="btn btn-info w-100" onclick="verInformeMascota(${mascota.id})">
+                                    <i class="fas fa-file-medical me-1"></i>Ver Informe Médico
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            resultadosSection.style.display = 'block';
+            
+            // Scroll to results
+            resultadosSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Ver informe completo de mascota
+        async function verInformeMascota(mascotaId) {
+            try {
+                const response = await fetch(`/api/paciente/informe/${mascotaId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarInformePaciente(data);
+                } else {
+                    alert('Error al obtener el informe médico');
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+        
+        // Mostrar informe en modal
+        function mostrarInformePaciente(data) {
+            const container = document.getElementById('informe-contenido-paciente');
+            const mascota = data.mascota;
+            
+            let html = `
+                <div class="informe-header mb-4">
+                    <h4><i class="fas fa-file-medical me-2"></i>Informe Médico Veterinario</h4>
+                    <p class="text-muted">Generado el ${new Date().toLocaleString()}</p>
+                </div>
+                
+                <div class="informe-section mb-4">
+                    <h6><i class="fas fa-paw me-2"></i>Información de la Mascota</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nombre:</strong> ${mascota.nombre}</p>
+                            <p><strong>Especie:</strong> ${mascota.especie}</p>
+                            <p><strong>Raza:</strong> ${mascota.raza || 'No especificada'}</p>
+                            <p><strong>Edad:</strong> ${mascota.edad || 'No especificada'} años</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Peso:</strong> ${mascota.peso || 'No especificado'} kg</p>
+                            <p><strong>Color:</strong> ${mascota.color || 'No especificado'}</p>
+                            <p><strong>Sexo:</strong> ${mascota.sexo || 'No especificado'}</p>
+                            <p><strong>Fecha de registro:</strong> ${new Date(mascota.fecha_registro).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="informe-section mb-4">
+                    <h6><i class="fas fa-user me-2"></i>Información del Propietario</h6>
+                    <p><strong>Nombre:</strong> ${mascota.cliente_nombre} ${mascota.cliente_apellido}</p>
+                    <p><strong>Teléfono:</strong> ${mascota.telefono || 'No especificado'}</p>
+                    <p><strong>Email:</strong> ${mascota.email || 'No especificado'}</p>
+                </div>
+            `;
+            
+            // Historial de consultas
+            if (data.consultas && data.consultas.length > 0) {
+                html += `
+                    <div class="informe-section mb-4">
+                        <h6><i class="fas fa-stethoscope me-2"></i>Historial de Consultas</h6>
+                `;
+                
+                data.consultas.forEach(consulta => {
+                    html += `
+                        <div class="mb-3 p-3 border-start border-3 border-info">
+                            <h6>${new Date(consulta.fecha_consulta).toLocaleString()}</h6>
+                            <p><strong>Motivo:</strong> ${consulta.motivo}</p>
+                            ${consulta.diagnostico ? `<p><strong>Diagnóstico:</strong> ${consulta.diagnostico}</p>` : ''}
+                            ${consulta.tratamiento ? `<p><strong>Tratamiento:</strong> ${consulta.tratamiento}</p>` : ''}
+                            ${consulta.peso_actual ? `<p><strong>Peso:</strong> ${consulta.peso_actual} kg</p>` : ''}
+                            ${consulta.temperatura ? `<p><strong>Temperatura:</strong> ${consulta.temperatura} °C</p>` : ''}
+                            ${consulta.observaciones ? `<p><strong>Observaciones:</strong> ${consulta.observaciones}</p>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            // Análisis y estudios
+            if (data.analisis && data.analisis.length > 0) {
+                html += `
+                    <div class="informe-section mb-4">
+                        <h6><i class="fas fa-flask me-2"></i>Análisis y Estudios</h6>
+                `;
+                
+                data.analisis.forEach(item => {
+                    html += `
+                        <div class="mb-3 p-3 border-start border-3 border-warning">
+                            <h6>${item.tipo_analisis} - ${new Date(item.fecha_analisis).toLocaleString()}</h6>
+                            ${item.resultados ? `<p><strong>Resultados:</strong> ${item.resultados}</p>` : ''}
+                            ${item.archivo_adjunto ? `<p><strong>Archivo adjunto:</strong> <a href="/uploads/${item.archivo_adjunto}" target="_blank">${item.archivo_adjunto}</a></p>` : ''}
+                            ${item.observaciones ? `<p><strong>Observaciones:</strong> ${item.observaciones}</p>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            // Vacunas
+            if (data.vacunas && data.vacunas.length > 0) {
+                html += `
+                    <div class="informe-section">
+                        <h6><i class="fas fa-syringe me-2"></i>Historial de Vacunación</h6>
+                `;
+                
+                data.vacunas.forEach(vacuna => {
+                    html += `
+                        <div class="mb-3 p-3 border-start border-3 border-success">
+                            <h6>${vacuna.nombre_vacuna}</h6>
+                            <p><strong>Fecha de aplicación:</strong> ${new Date(vacuna.fecha_aplicacion).toLocaleDateString()}</p>
+                            ${vacuna.fecha_proxima ? `<p><strong>Próxima dosis:</strong> ${new Date(vacuna.fecha_proxima).toLocaleDateString()}</p>` : ''}
+                            ${vacuna.lote ? `<p><strong>Lote:</strong> ${vacuna.lote}</p>` : ''}
+                            ${vacuna.veterinario ? `<p><strong>Veterinario:</strong> ${vacuna.veterinario}</p>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('informeModal'));
+            modal.show();
+        }
+        
+        // Imprimir informe
+        function imprimirInformePaciente() {
+            const contenido = document.getElementById('informe-contenido-paciente').innerHTML;
+            const ventana = window.open('', '_blank');
+            ventana.document.write(`
+                <html>
+                <head>
+                    <title>Informe Médico - MUNDO PATAS</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body { padding: 20px; }
+                        .informe-section { margin-bottom: 20px; }
+                        @media print {
+                            .btn { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+                </html>
+            `);
+            ventana.document.close();
+            ventana.print();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Nuevas Funcionalidades</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/sistema.html">
+                <i class="fas fa-paw me-2"></i>
+                MUNDO PATAS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/sistema.html">
+                            <i class="fas fa-arrow-left me-1"></i>Volver al Sistema
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('citas')">
+                            <i class="fas fa-calendar-alt me-1"></i>Citas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('facturacion')">
+                            <i class="fas fa-file-invoice-dollar me-1"></i>Facturación
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('inventario')">
+                            <i class="fas fa-pills me-1"></i>Inventario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('notificaciones')">
+                            <i class="fas fa-bell me-1"></i>Notificaciones
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('reportes')">
+                            <i class="fas fa-chart-bar me-1"></i>Reportes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('telemedicina')">
+                            <i class="fas fa-video me-1"></i>Telemedicina
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Citas Section -->
+        <div id="citas-section" class="content-section">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-calendar-alt me-2"></i>Sistema de Citas</h2>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Gestiona citas médicas con calendario integrado y recordatorios automáticos.
+                    </div>
+                    <button class="btn btn-primary mb-3" onclick="showCitaModal()">
+                        <i class="fas fa-plus me-1"></i>Nueva Cita
+                    </button>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="filtro-estado-cita">
+                                <option value="">Todos los estados</option>
+                                <option value="programada">Programada</option>
+                                <option value="confirmada">Confirmada</option>
+                                <option value="completada">Completada</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control" id="filtro-fecha-cita">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-primary" onclick="filtrarCitas()">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Mascota</th>
+                                    <th>Motivo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="citas-list">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-calendar-plus fa-2x mb-2"></i><br>
+                                        No hay citas registradas. Crea tu primera cita.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Facturación Section -->
+        <div id="facturacion-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-file-invoice-dollar me-2"></i>Gestión Financiera</h2>
+                    <div class="alert alert-success">
+                        <i class="fas fa-dollar-sign me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Control completo de facturación, pagos y estados financieros.
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <button class="btn btn-primary me-2" onclick="showFacturaModal()">
+                                <i class="fas fa-plus me-1"></i>Nueva Factura
+                            </button>
+                            <button class="btn btn-success" onclick="showPagoModal()">
+                                <i class="fas fa-money-bill-wave me-1"></i>Registrar Pago
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Saldo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="facturas-list">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-file-invoice fa-2x mb-2"></i><br>
+                                        No hay facturas registradas. Crea tu primera factura.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventario Section -->
+        <div id="inventario-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-pills me-2"></i>Inventario de Medicamentos</h2>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-pills me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Control de stock, alertas de vencimiento y movimientos de inventario.
+                    </div>
+                    <button class="btn btn-primary mb-3" onclick="showMedicamentoModal()">
+                        <i class="fas fa-plus me-1"></i>Nuevo Medicamento
+                    </button>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="filtro-stock">
+                                <option value="">Todos</option>
+                                <option value="bajo">Stock Bajo</option>
+                                <option value="vencimiento">Próximo a Vencer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-primary" onclick="filtrarInventario()">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Principio Activo</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Precio Venta</th>
+                                    <th>Vencimiento</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="medicamentos-list">
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        <i class="fas fa-capsules fa-2x mb-2"></i><br>
+                                        No hay medicamentos registrados. Agrega tu primer medicamento.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones Section -->
+        <div id="notificaciones-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-bell me-2"></i>Centro de Notificaciones</h2>
+                    <div class="alert alert-primary">
+                        <i class="fas fa-bell me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Notificaciones automáticas para vacunas, stock bajo y citas del día.
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <button class="btn btn-primary" onclick="marcarTodasLeidas()">
+                                <i class="fas fa-check-double me-1"></i>Marcar Todas como Leídas
+                            </button>
+                        </div>
+                    </div>
+                    <div id="notificaciones-list">
+                        <div class="card">
+                            <div class="card-body text-center text-muted">
+                                <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                                <h5>No hay notificaciones</h5>
+                                <p>Las notificaciones automáticas aparecerán aquí cada hora.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reportes Section -->
+        <div id="reportes-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Reportes y Estadísticas</h2>
+                    <div class="alert alert-info">
+                        <i class="fas fa-chart-line me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Dashboard avanzado con métricas financieras y estadísticas de consultas.
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5>Ingresos del Mes</h5>
+                                    <h3 id="ingresos-mes">$0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5>Consultas del Mes</h5>
+                                    <h3 id="consultas-mes">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5>Citas Pendientes</h5>
+                                    <h3 id="citas-pendientes">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5>Stock Bajo</h5>
+                                    <h3 id="stock-bajo">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Reporte de Ingresos</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">Gráfico de ingresos mensuales se mostrará aquí.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Clientes Más Frecuentes</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="clientes-frecuentes-list">
+                                        <p class="text-muted">Lista de clientes frecuentes se mostrará aquí.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemedicina Section -->
+        <div id="telemedicina-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-video me-2"></i>Telemedicina</h2>
+                    <div class="alert alert-success">
+                        <i class="fas fa-video me-2"></i>
+                        <strong>Nueva Funcionalidad:</strong> Consultas virtuales con chat, videollamadas y archivos adjuntos.
+                    </div>
+                    <button class="btn btn-primary mb-3" onclick="showSesionModal()">
+                        <i class="fas fa-plus me-1"></i>Nueva Sesión
+                    </button>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Mascota</th>
+                                    <th>Estado</th>
+                                    <th>Mensajes</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sesiones-list">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        <i class="fas fa-video fa-2x mb-2"></i><br>
+                                        No hay sesiones de telemedicina. Inicia tu primera sesión virtual.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función para mostrar secciones
+        function showSection(sectionName) {
+            // Ocultar todas las secciones
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Mostrar la sección seleccionada
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+            
+            // Actualizar navegación activa
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Cargar datos de la sección
+            loadSectionData(sectionName);
+        }
+
+        // Función para cargar datos de cada sección
+        function loadSectionData(sectionName) {
+            const token = localStorage.getItem('token');
+            
+            switch(sectionName) {
+                case 'citas':
+                    loadCitas();
+                    break;
+                case 'facturacion':
+                    loadFacturas();
+                    break;
+                case 'inventario':
+                    loadInventario();
+                    break;
+                case 'notificaciones':
+                    loadNotificaciones();
+                    break;
+                case 'reportes':
+                    loadReportes();
+                    break;
+                case 'telemedicina':
+                    loadTelemedicina();
+                    break;
+            }
+        }
+
+        // Funciones placeholder para cargar datos
+        function loadCitas() {
+            console.log('Cargando citas...');
+            // Aquí se implementaría la carga de citas desde la API
+        }
+
+        function loadFacturas() {
+            console.log('Cargando facturas...');
+            // Aquí se implementaría la carga de facturas desde la API
+        }
+
+        function loadInventario() {
+            console.log('Cargando inventario...');
+            // Aquí se implementaría la carga de medicamentos desde la API
+        }
+
+        function loadNotificaciones() {
+            console.log('Cargando notificaciones...');
+            // Aquí se implementaría la carga de notificaciones desde la API
+        }
+
+        function loadReportes() {
+            console.log('Cargando reportes...');
+            // Aquí se implementaría la carga de reportes desde la API
+        }
+
+        function loadTelemedicina() {
+            console.log('Cargando sesiones de telemedicina...');
+            // Aquí se implementaría la carga de sesiones desde la API
+        }
+
+        // Funciones placeholder para modales
+        function showCitaModal() {
+            alert('Modal de nueva cita - Funcionalidad en desarrollo');
+        }
+
+        function showFacturaModal() {
+            alert('Modal de nueva factura - Funcionalidad en desarrollo');
+        }
+
+        function showPagoModal() {
+            alert('Modal de registrar pago - Funcionalidad en desarrollo');
+        }
+
+        function showMedicamentoModal() {
+            alert('Modal de nuevo medicamento - Funcionalidad en desarrollo');
+        }
+
+        function showSesionModal() {
+            alert('Modal de nueva sesión - Funcionalidad en desarrollo');
+        }
+
+        function filtrarCitas() {
+            alert('Filtro de citas - Funcionalidad en desarrollo');
+        }
+
+        function filtrarInventario() {
+            alert('Filtro de inventario - Funcionalidad en desarrollo');
+        }
+
+        function marcarTodasLeidas() {
+            alert('Marcar notificaciones como leídas - Funcionalidad en desarrollo');
+        }
+
+        // Verificar autenticación al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                alert('Debes iniciar sesión para acceder al sistema.');
+                window.location.href = '/';
+                return;
+            }
+            
+            // Mostrar primera sección por defecto
+            showSection('citas');
+        });
+    </script>
+</body>
+</html>

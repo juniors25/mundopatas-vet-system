@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - MUNDO PATAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .manual-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; }
+        .section-card { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .section-header { background: #f8f9fa; padding: 1rem; border-radius: 15px 15px 0 0; border-bottom: 2px solid #667eea; }
+        .step-number { background: #667eea; color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; }
+        .feature-icon { color: #667eea; font-size: 1.5rem; margin-right: 10px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="manual-header text-center no-print">
+        <div class="container">
+            <h1><i class="fas fa-paw me-3"></i>MUNDO PATAS</h1>
+            <h2>Manual de Usuario del Sistema</h2>
+            <p class="lead">Guía completa para el uso del sistema veterinario</p>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <!-- Botones de acción -->
+        <div class="row mb-4 no-print">
+            <div class="col-12 text-center">
+                <button onclick="window.print()" class="btn btn-primary me-3">
+                    <i class="fas fa-print me-2"></i>Imprimir Manual
+                </button>
+                <button onclick="downloadPDF()" class="btn btn-success me-3">
+                    <i class="fas fa-download me-2"></i>Descargar PDF
+                </button>
+                <a href="/" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Volver al Sistema
+                </a>
+            </div>
+        </div>
+
+        <!-- Índice -->
+        <div class="section-card">
+            <div class="section-header">
+                <h3><i class="fas fa-list feature-icon"></i>Índice de Contenidos</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><a href="#inicio">1. Primeros Pasos</a></li>
+                            <li><a href="#clientes">2. Gestión de Clientes</a></li>
+                            <li><a href="#mascotas">3. Registro de Mascotas</a></li>
+                            <li><a href="#consultas">4. Consultas Médicas</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><a href="#analisis">5. Análisis Clínicos</a></li>
+                            <li><a href="#vacunas">6. Control de Vacunas</a></li>
+                            <li><a href="#informes">7. Informes Médicos</a></li>
+                            <li><a href="#portal">8. Portal del Paciente</a></li>
+                            <li><a href="#licencia">9. Activación de Licencia Premium</a></li>
+                            <li><a href="#citas">10. Sistema de Citas</a></li>
+                            <li><a href="#facturacion">11. Gestión Financiera</a></li>
+                            <li><a href="#inventario">12. Inventario de Medicamentos</a></li>
+                            <li><a href="#notificaciones">13. Centro de Notificaciones</a></li>
+                            <li><a href="#reportes">14. Reportes y Estadísticas</a></li>
+                            <li><a href="#telemedicina">15. Telemedicina</a></li>
+                            <li><a href="#multivet">16. Sistema Multi-Veterinario</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 1: Primeros Pasos -->
+        <div class="section-card" id="inicio">
+            <div class="section-header">
+                <h3><i class="fas fa-play-circle feature-icon"></i>1. Primeros Pasos</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><span class="step-number">1</span>Acceso al Sistema</h5>
+                        <ul>
+                            <li><strong>Demo:</strong> Haz clic en "Acceder al Sistema Demo" para probar sin registro</li>
+                            <li><strong>Registro:</strong> Usa "Registrar Veterinaria" para crear tu cuenta</li>
+                            <li>Completa los datos de tu veterinaria y veterinario</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><span class="step-number">2</span>Panel Principal</h5>
+                        <ul>
+                            <li>Dashboard con estadísticas generales</li>
+                            <li>Navegación por las diferentes secciones</li>
+                            <li>Acceso rápido a funciones principales</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Gestión de Clientes -->
+        <div class="section-card" id="clientes">
+            <div class="section-header">
+                <h3><i class="fas fa-users feature-icon"></i>2. Gestión de Clientes</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Registrar Nuevo Cliente</h5>
+                <ul>
+                    <li>Ve a la sección "Clientes" → "Registrar Cliente"</li>
+                    <li>Completa: Nombre, Apellido (obligatorios)</li>
+                    <li>Opcional: Email, Teléfono, Dirección</li>
+                    <li>Haz clic en "Registrar Cliente"</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Ver Lista de Clientes</h5>
+                <ul>
+                    <li>Accede a "Clientes" → "Ver Clientes"</li>
+                    <li>Lista completa con datos de contacto</li>
+                    <li>Fecha de registro de cada cliente</li>
+                    <li>Acceso directo a las mascotas de cada cliente</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 3: Registro de Mascotas -->
+        <div class="section-card" id="mascotas">
+            <div class="section-header">
+                <h3><i class="fas fa-paw feature-icon"></i>3. Registro de Mascotas</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Agregar Nueva Mascota</h5>
+                <ul>
+                    <li>Ve a "Mascotas" → "Registrar Mascota"</li>
+                    <li>Selecciona el cliente propietario</li>
+                    <li>Completa datos: Nombre, Especie, Raza</li>
+                    <li>Agrega: Edad, Peso, Color, Sexo</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Gestionar Mascotas</h5>
+                <ul>
+                    <li>Lista de todas las mascotas registradas</li>
+                    <li>Información del propietario</li>
+                    <li>Acceso a historial médico completo</li>
+                    <li>Edición de datos básicos</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 4: Consultas Médicas -->
+        <div class="section-card" id="consultas">
+            <div class="section-header">
+                <h3><i class="fas fa-stethoscope feature-icon"></i>4. Consultas Médicas</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Registrar Consulta</h5>
+                <ul>
+                    <li>Selecciona la mascota desde "Mascotas"</li>
+                    <li>Haz clic en "Nueva Consulta"</li>
+                    <li>Completa: Motivo de consulta</li>
+                    <li>Agrega: Diagnóstico, Tratamiento, Observaciones</li>
+                    <li>Registra: Peso actual, Temperatura</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Historial de Consultas</h5>
+                <ul>
+                    <li>Ver todas las consultas por mascota</li>
+                    <li>Ordenadas por fecha (más recientes primero)</li>
+                    <li>Seguimiento de evolución del paciente</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 5: Análisis Clínicos -->
+        <div class="section-card" id="analisis">
+            <div class="section-header">
+                <h3><i class="fas fa-flask feature-icon"></i>5. Análisis Clínicos</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Cargar Análisis</h5>
+                <ul>
+                    <li>Desde el perfil de la mascota, ve a "Análisis"</li>
+                    <li>Selecciona tipo: Sangre, Orina, Radiografía, etc.</li>
+                    <li>Sube archivo PDF/imagen del resultado</li>
+                    <li>Agrega resultados y observaciones</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Gestión de Resultados</h5>
+                <ul>
+                    <li>Historial completo de análisis</li>
+                    <li>Descarga de archivos adjuntos</li>
+                    <li>Comparación de resultados históricos</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 6: Control de Vacunas -->
+        <div class="section-card" id="vacunas">
+            <div class="section-header">
+                <h3><i class="fas fa-syringe feature-icon"></i>6. Control de Vacunas</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Registrar Vacuna</h5>
+                <ul>
+                    <li>Accede a "Vacunas" desde el menú principal</li>
+                    <li>Selecciona la mascota</li>
+                    <li>Elige vacuna: Antirrábica, Séxtuple, etc.</li>
+                    <li>Registra: Fecha aplicación, Próxima dosis</li>
+                    <li>Agrega: Lote, Veterinario, Observaciones</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Control de Vencimientos</h5>
+                <ul>
+                    <li><span class="badge bg-danger">Rojo:</span> Vacuna vencida</li>
+                    <li><span class="badge bg-warning">Amarillo:</span> Próxima a vencer (30 días)</li>
+                    <li><span class="badge bg-success">Verde:</span> Al día</li>
+                    <li>Filtros por mascota y tipo de vacuna</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 7: Informes Médicos -->
+        <div class="section-card" id="informes">
+            <div class="section-header">
+                <h3><i class="fas fa-file-medical feature-icon"></i>7. Informes Médicos</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Generar Informe</h5>
+                <ul>
+                    <li>Desde el perfil de mascota, haz clic en "Generar Informe"</li>
+                    <li>El sistema compila automáticamente:</li>
+                    <li>→ Datos básicos de mascota y propietario</li>
+                    <li>→ Historial completo de consultas</li>
+                    <li>→ Todos los análisis realizados</li>
+                    <li>→ Registro completo de vacunación</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Usar el Informe</h5>
+                <ul>
+                    <li>Impresión directa del informe</li>
+                    <li>Compartir con otros veterinarios</li>
+                    <li>Entrega al propietario</li>
+                    <li>Respaldo para seguros</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sección 8: Portal del Paciente -->
+        <div class="section-card" id="portal">
+            <div class="section-header">
+                <h3><i class="fas fa-user-circle feature-icon"></i>8. Portal del Paciente</h3>
+            </div>
+            <div class="card-body">
+                <h5><span class="step-number">1</span>Acceso para Clientes</h5>
+                <ul>
+                    <li>Los clientes pueden acceder desde la página principal</li>
+                    <li>Botón "Portal Paciente" en la página de inicio</li>
+                    <li>Búsqueda por nombre completo del propietario</li>
+                    <li>Opcional: verificación por email</li>
+                </ul>
+
+                <h5><span class="step-number">2</span>Funciones del Portal</h5>
+                <ul>
+                    <li>Ver información de sus mascotas</li>
+                    <li>Consultar historial médico completo</li>
+                    <li>Revisar próximas vacunas</li>
+                    <li>Descargar informes médicos</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Información de Contacto -->
+        <div class="section-card">
+            <div class="section-header">
+                <h3><i class="fas fa-phone feature-icon"></i>Soporte y Contacto</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Desarrollador del Sistema</h5>
+                        <p><strong>Gastón Díaz</strong></p>
+                        <p><i class="fas fa-phone me-2"></i>2617024193</p>
+                        <p><i class="fas fa-envelope me-2"></i>jjvserviciosinformaticos@gmail.com</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Soporte Técnico</h5>
+                        <ul>
+                            <li>Instalación y configuración</li>
+                            <li>Capacitación del personal</li>
+                            <li>Actualizaciones del sistema</li>
+                            <li>Resolución de problemas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consejos y Buenas Prácticas -->
+        <div class="section-card">
+            <div class="section-header">
+                <h3><i class="fas fa-lightbulb feature-icon"></i>Consejos y Buenas Prácticas</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>📊 Gestión de Datos</h5>
+                        <ul>
+                            <li>Registra clientes completos desde el inicio</li>
+                            <li>Mantén actualizada la información de contacto</li>
+                            <li>Usa observaciones detalladas en consultas</li>
+                            <li>Sube archivos de análisis para respaldo</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>🔄 Flujo de Trabajo</h5>
+                        <ul>
+                            <li>Cliente → Mascota → Consulta → Análisis/Vacunas</li>
+                            <li>Genera informes al final de cada consulta</li>
+                            <li>Revisa vencimientos de vacunas semanalmente</li>
+                            <li>Capacita al personal en el uso del portal</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        function downloadPDF() {
+            // Ocultar elementos no imprimibles
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.display = 'none');
+            
+            // Generar PDF
+            window.jsPDF = window.jspdf.jsPDF;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            html2canvas(document.body, {
+                scale: 0.8,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                doc.save('Manual-MUNDO-PATAS.pdf');
+                
+                // Mostrar elementos nuevamente
+                noPrintElements.forEach(el => el.style.display = '');
+            });
+        }
+    </script>
+
+    <!-- Nuevas secciones del manual -->
+
+    <!-- Sección 9: Activación de Licencia Premium -->
+    <div class="section-card" id="licencia">
+        <div class="section-header">
+            <h3><i class="fas fa-key feature-icon"></i>9. Activación de Licencia Premium</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-crown me-2"></i>
+                <strong>¡Funcionalidades Premium Disponibles!</strong> Activa tu licencia para acceder a todas las funciones profesionales.
+            </div>
+            
+            <h5><span class="step-number">1</span>¿Qué incluye la Licencia Premium?</h5>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <ul>
+                        <li><i class="fas fa-calendar-alt text-primary me-2"></i>Sistema de Citas y Agenda</li>
+                        <li><i class="fas fa-file-invoice-dollar text-success me-2"></i>Gestión Financiera Completa</li>
+                        <li><i class="fas fa-pills text-warning me-2"></i>Inventario de Medicamentos</li>
+                        <li><i class="fas fa-bell text-info me-2"></i>Centro de Notificaciones</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul>
+                        <li><i class="fas fa-chart-bar text-primary me-2"></i>Reportes y Estadísticas</li>
+                        <li><i class="fas fa-video text-success me-2"></i>Telemedicina</li>
+                        <li><i class="fas fa-user-md text-warning me-2"></i>Sistema Multi-Veterinario</li>
+                        <li><i class="fas fa-cloud text-info me-2"></i>Respaldo en la Nube</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h5><span class="step-number">2</span>Cómo Activar tu Licencia</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <ol>
+                        <li><strong>Contacta al Desarrollador:</strong>
+                            <div class="card mt-2 mb-3">
+                                <div class="card-body bg-light">
+                                    <h6><i class="fas fa-user me-2"></i>Gastón Díaz - Desarrollador</h6>
+                                    <p class="mb-1"><i class="fas fa-phone me-2"></i><strong>Teléfono:</strong> 2617024193</p>
+                                    <p class="mb-1"><i class="fas fa-envelope me-2"></i><strong>Email:</strong> jjvserviciosinformaticos@gmail.com</p>
+                                    <p class="mb-0"><i class="fas fa-building me-2"></i><strong>Empresa:</strong> JJV Servicios Informáticos</p>
+                                </div>
+                            </div>
+                        </li>
+                        <li><strong>Solicita tu Clave de Licencia:</strong> El desarrollador te proporcionará una clave única</li>
+                        <li><strong>Activa en el Sistema:</strong> Ve a "Nuevas Funciones" → Ingresa tu clave de licencia</li>
+                        <li><strong>¡Listo!</strong> Todas las funciones premium estarán disponibles</li>
+                        <li><strong>Plan Básico</strong>: $15,000 ARS/mes - Funciones básicas de citas y facturación</li>
+                        <li><strong>Plan Profesional</strong>: $30,000 ARS/mes - Incluye inventario, notificaciones y reportes</li>
+                        <li><strong>Plan Premium</strong>: $50,000 ARS/mes - Todas las funciones incluyendo telemedicina y multi-veterinario</li>
+                    </ol>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6><i class="fas fa-star me-2"></i>Planes Disponibles</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Básico:</strong> $15,000 ARS/mes</p>
+                            <p><strong>Profesional:</strong> $30,000 ARS/mes</p>
+                            <p><strong>Premium:</strong> $50,000 ARS/mes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección 10: Sistema de Citas -->
+    <div class="section-card" id="citas">
+        <div class="section-header">
+            <h3><i class="fas fa-calendar-alt feature-icon"></i>10. Sistema de Citas <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Gestión de Agenda</h5>
+            <ul>
+                <li>Programa citas con fecha, hora y motivo específico</li>
+                <li>Asigna citas a clientes y mascotas registradas</li>
+                <li>Control de disponibilidad automático</li>
+                <li>Estados: Programada, Confirmada, Completada, Cancelada</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Filtros y Búsqueda</h5>
+            <ul>
+                <li>Filtra por estado de cita</li>
+                <li>Busca por fecha específica</li>
+                <li>Vista de calendario integrada</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Recordatorios Automáticos</h5>
+            <ul>
+                <li>Notificaciones de citas del día</li>
+                <li>Alertas de citas próximas</li>
+                <li>Recordatorios para clientes</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 11: Gestión Financiera -->
+    <div class="section-card" id="facturacion">
+        <div class="section-header">
+            <h3><i class="fas fa-file-invoice-dollar feature-icon"></i>11. Gestión Financiera <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Facturación Completa</h5>
+            <ul>
+                <li>Genera facturas con múltiples items</li>
+                <li>Cálculo automático de impuestos (IVA 21%)</li>
+                <li>Numeración automática de facturas</li>
+                <li>Estados: Pendiente, Parcial, Pagada</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Control de Pagos</h5>
+            <ul>
+                <li>Registra pagos parciales o totales</li>
+                <li>Múltiples métodos de pago</li>
+                <li>Control automático de saldos</li>
+                <li>Historial completo de pagos</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Reportes Financieros</h5>
+            <ul>
+                <li>Ingresos por período</li>
+                <li>Cuentas por cobrar</li>
+                <li>Análisis de rentabilidad</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 12: Inventario de Medicamentos -->
+    <div class="section-card" id="inventario">
+        <div class="section-header">
+            <h3><i class="fas fa-pills feature-icon"></i>12. Inventario de Medicamentos <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Catálogo de Medicamentos</h5>
+            <ul>
+                <li>Registro completo con principio activo</li>
+                <li>Control de presentación y concentración</li>
+                <li>Información del laboratorio</li>
+                <li>Precios de compra y venta</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Control de Stock</h5>
+            <ul>
+                <li>Stock actual y mínimo</li>
+                <li>Alertas de stock bajo automáticas</li>
+                <li>Movimientos de entrada y salida</li>
+                <li>Trazabilidad completa</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Gestión de Vencimientos</h5>
+            <ul>
+                <li>Control de fechas de vencimiento</li>
+                <li>Alertas de medicamentos próximos a vencer</li>
+                <li>Reportes de medicamentos vencidos</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 13: Centro de Notificaciones -->
+    <div class="section-card" id="notificaciones">
+        <div class="section-header">
+            <h3><i class="fas fa-bell feature-icon"></i>13. Centro de Notificaciones <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Notificaciones Automáticas</h5>
+            <ul>
+                <li>Se ejecutan cada hora automáticamente</li>
+                <li>Vacunas próximas a vencer (7 días)</li>
+                <li>Medicamentos con stock bajo</li>
+                <li>Citas programadas para hoy</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Gestión de Alertas</h5>
+            <ul>
+                <li>Marca notificaciones como leídas</li>
+                <li>Filtra por tipo de notificación</li>
+                <li>Historial completo de alertas</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Notificaciones Personalizadas</h5>
+            <ul>
+                <li>Crea notificaciones manuales</li>
+                <li>Recordatorios personalizados</li>
+                <li>Alertas para eventos específicos</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 14: Reportes y Estadísticas -->
+    <div class="section-card" id="reportes">
+        <div class="section-header">
+            <h3><i class="fas fa-chart-bar feature-icon"></i>14. Reportes y Estadísticas <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Dashboard Avanzado</h5>
+            <ul>
+                <li>Métricas en tiempo real</li>
+                <li>Ingresos del mes actual</li>
+                <li>Consultas realizadas</li>
+                <li>Citas pendientes y stock bajo</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Reportes Financieros</h5>
+            <ul>
+                <li>Análisis de ingresos por período</li>
+                <li>Gráficos de tendencias</li>
+                <li>Comparativas mensuales</li>
+                <li>Rentabilidad por servicio</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Estadísticas Clínicas</h5>
+            <ul>
+                <li>Consultas por tipo de motivo</li>
+                <li>Clientes más frecuentes</li>
+                <li>Análisis de especies atendidas</li>
+                <li>Reportes de vacunación</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 15: Telemedicina -->
+    <div class="section-card" id="telemedicina">
+        <div class="section-header">
+            <h3><i class="fas fa-video feature-icon"></i>15. Telemedicina <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Consultas Virtuales</h5>
+            <ul>
+                <li>Sesiones de chat en tiempo real</li>
+                <li>Videollamadas integradas</li>
+                <li>Compartir archivos e imágenes</li>
+                <li>Historial completo de conversaciones</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Gestión de Sesiones</h5>
+            <ul>
+                <li>Inicia sesiones con clientes</li>
+                <li>Estados: Activa, Finalizada</li>
+                <li>Control de mensajes no leídos</li>
+                <li>Notificaciones de nuevos mensajes</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Comunicación Efectiva</h5>
+            <ul>
+                <li>Envío de documentos médicos</li>
+                <li>Recetas digitales</li>
+                <li>Seguimiento post-consulta</li>
+                <li>Archivo de consultas virtuales</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección 16: Sistema Multi-Veterinario -->
+    <div class="section-card" id="multivet">
+        <div class="section-header">
+            <h3><i class="fas fa-user-md feature-icon"></i>16. Sistema Multi-Veterinario <span class="badge bg-warning">PREMIUM</span></h3>
+        </div>
+        <div class="card-body">
+            <h5><span class="step-number">1</span>Gestión de Usuarios</h5>
+            <ul>
+                <li>Roles: Administrador y Veterinario</li>
+                <li>Permisos diferenciados por rol</li>
+                <li>Gestión de contraseñas seguras</li>
+                <li>Activación/desactivación de usuarios</li>
+            </ul>
+
+            <h5><span class="step-number">2</span>Asignación de Clientes</h5>
+            <ul>
+                <li>Distribución de cartera por veterinario</li>
+                <li>Acceso solo a clientes asignados</li>
+                <li>Reasignación flexible</li>
+                <li>Historial de asignaciones</li>
+            </ul>
+
+            <h5><span class="step-number">3</span>Administración Centralizada</h5>
+            <ul>
+                <li>Panel de administración completo</li>
+                <li>Creación y edición de veterinarios</li>
+                <li>Monitoreo de actividad</li>
+                <li>Reportes por veterinario</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sección de Contacto -->
+    <div class="section-card">
+        <div class="section-header">
+            <h3><i class="fas fa-phone feature-icon"></i>Soporte y Contacto</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>Desarrollador</h5>
+                    <p><strong>Gastón Díaz</strong><br>
+                    Desarrollador de Software</p>
+                </div>
+                <div class="col-md-6">
+                    <h5><i class="fas fa-building me-2"></i>Empresa</h5>
+                    <p><strong>JJV Servicios Informáticos</strong><br>
+                    Soluciones tecnológicas profesionales</p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <i class="fas fa-phone fa-2x text-primary mb-2"></i>
+                            <h6>Teléfono</h6>
+                            <p><strong>2617024193</strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <i class="fas fa-envelope fa-2x text-success mb-2"></i>
+                            <h6>Email</h6>
+                            <p><strong>jjvserviciosinformaticos@gmail.com</strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                            <h6>Horario</h6>
+                            <p><strong>Lun-Vie 9:00-18:00</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

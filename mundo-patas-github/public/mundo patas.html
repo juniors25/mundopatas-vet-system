@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Sistema Veterinario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-paw me-2"></i>
+                MUNDO PATAS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('dashboard')">
+                            <i class="fas fa-home me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('clientes')">
+                            <i class="fas fa-users me-1"></i>Clientes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('mascotas')">
+                            <i class="fas fa-dog me-1"></i>Mascotas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('consultas')">
+                            <i class="fas fa-stethoscope me-1"></i>Consultas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('analisis')">
+                            <i class="fas fa-flask me-1"></i>Análisis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('vacunas')">
+                            <i class="fas fa-syringe me-1"></i>Vacunas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('informes')">
+                            <i class="fas fa-file-medical me-1"></i>Informes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="content-section">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-home me-2"></i>Dashboard</h2>
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h4 id="total-clientes">0</h4>
+                                            <p>Clientes</p>
+                                        </div>
+                                        <i class="fas fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h4 id="total-mascotas">0</h4>
+                                            <p>Mascotas</p>
+                                        </div>
+                                        <i class="fas fa-paw fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h4 id="total-consultas">0</h4>
+                                            <p>Consultas Hoy</p>
+                                        </div>
+                                        <i class="fas fa-stethoscope fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h4 id="total-analisis">0</h4>
+                                            <p>Análisis</p>
+                                        </div>
+                                        <i class="fas fa-flask fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clientes Section -->
+        <div id="clientes-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-user-plus me-2"></i>Registrar Cliente</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="cliente-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input type="text" class="form-control" name="nombre" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Apellido</label>
+                                    <input type="text" class="form-control" name="apellido" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="tel" class="form-control" name="telefono">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Dirección</label>
+                                    <input type="text" class="form-control" name="direccion">
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Registrar Cliente
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-users me-2"></i>Lista de Clientes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>Teléfono</th>
+                                            <th>Email</th>
+                                            <th>Fecha Registro</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientes-table">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mascotas Section -->
+        <div id="mascotas-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-paw me-2"></i>Registrar Mascota</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="mascota-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" name="cliente_id" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre de la Mascota</label>
+                                    <input type="text" class="form-control" name="nombre" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Especie</label>
+                                    <select class="form-select" name="especie" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Perro">Perro</option>
+                                        <option value="Gato">Gato</option>
+                                        <option value="Ave">Ave</option>
+                                        <option value="Conejo">Conejo</option>
+                                        <option value="Hamster">Hamster</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Raza</label>
+                                    <input type="text" class="form-control" name="raza">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Edad (años)</label>
+                                    <input type="number" class="form-control" name="edad" min="0" step="0.1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Peso (kg)</label>
+                                    <input type="number" class="form-control" name="peso" min="0" step="0.1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Color</label>
+                                    <input type="text" class="form-control" name="color">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Sexo</label>
+                                    <select class="form-select" name="sexo">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Macho">Macho</option>
+                                        <option value="Hembra">Hembra</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>Registrar Mascota
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list me-2"></i>Lista de Mascotas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>Especie</th>
+                                            <th>Raza</th>
+                                            <th>Cliente</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mascotas-table">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consultas Section -->
+        <div id="consultas-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-stethoscope me-2"></i>Nueva Consulta</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="consulta-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" name="mascota_id" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Motivo de Consulta</label>
+                                    <textarea class="form-control" name="motivo" rows="3" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Diagnóstico</label>
+                                    <textarea class="form-control" name="diagnostico" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tratamiento</label>
+                                    <textarea class="form-control" name="tratamiento" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Peso Actual (kg)</label>
+                                    <input type="number" class="form-control" name="peso_actual" step="0.1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Temperatura (°C)</label>
+                                    <input type="number" class="form-control" name="temperatura" step="0.1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Observaciones</label>
+                                    <textarea class="form-control" name="observaciones" rows="3"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-save me-1"></i>Registrar Consulta
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-history me-2"></i>Historial de Consultas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="consultas-historial">
+                                <p class="text-muted">Selecciona una mascota para ver su historial de consultas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Análisis Section -->
+        <div id="analisis-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-flask me-2"></i>Nuevo Análisis</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="analisis-form" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" name="mascota_id" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tipo de Análisis</label>
+                                    <select class="form-select" name="tipo_analisis" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Hemograma">Hemograma</option>
+                                        <option value="Bioquímica">Bioquímica</option>
+                                        <option value="Orina">Análisis de Orina</option>
+                                        <option value="Heces">Análisis de Heces</option>
+                                        <option value="Radiografía">Radiografía</option>
+                                        <option value="Ecografía">Ecografía</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Resultados</label>
+                                    <textarea class="form-control" name="resultados" rows="4"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Archivo Adjunto</label>
+                                    <input type="file" class="form-control" name="archivo" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Observaciones</label>
+                                    <textarea class="form-control" name="observaciones" rows="3"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i>Registrar Análisis
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list-alt me-2"></i>Historial de Análisis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="analisis-historial">
+                                <p class="text-muted">Selecciona una mascota para ver su historial de análisis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vacunas Section -->
+        <div id="vacunas-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-syringe me-2"></i>Registrar Vacuna</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="vacuna-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" name="mascota_id" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre de la Vacuna</label>
+                                    <select class="form-select" name="nombre_vacuna" required>
+                                        <option value="">Seleccionar vacuna...</option>
+                                        <option value="Rabia">Rabia</option>
+                                        <option value="Parvovirus">Parvovirus</option>
+                                        <option value="Moquillo">Moquillo</option>
+                                        <option value="Hepatitis">Hepatitis</option>
+                                        <option value="Parainfluenza">Parainfluenza</option>
+                                        <option value="Bordetella">Bordetella</option>
+                                        <option value="Leptospirosis">Leptospirosis</option>
+                                        <option value="Triple Felina">Triple Felina</option>
+                                        <option value="Leucemia Felina">Leucemia Felina</option>
+                                        <option value="Otra">Otra</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="otra-vacuna-div" style="display: none;">
+                                    <label class="form-label">Especificar Vacuna</label>
+                                    <input type="text" class="form-control" name="otra_vacuna" placeholder="Nombre de la vacuna">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha de Aplicación</label>
+                                    <input type="date" class="form-control" name="fecha_aplicacion" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Próxima Dosis</label>
+                                    <input type="date" class="form-control" name="fecha_proxima">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Lote</label>
+                                    <input type="text" class="form-control" name="lote" placeholder="Número de lote">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Veterinario</label>
+                                    <input type="text" class="form-control" name="veterinario" placeholder="Nombre del veterinario">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Observaciones</label>
+                                    <textarea class="form-control" name="observaciones" rows="3" placeholder="Observaciones adicionales"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>Registrar Vacuna
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list me-2"></i>Historial de Vacunación</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Filtrar por Mascota</label>
+                                <select class="form-select" id="filtro-mascota-vacunas">
+                                    <option value="">Todas las mascotas</option>
+                                </select>
+                            </div>
+                            <div id="vacunas-historial">
+                                <p class="text-muted">Selecciona una mascota para ver su historial de vacunación.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informes Section -->
+        <div id="informes-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-search me-2"></i>Generar Informe</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Seleccionar Mascota</label>
+                                <select class="form-select" id="informe-mascota">
+                                    <option value="">Seleccionar mascota...</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="generarInforme()">
+                                <i class="fas fa-file-medical me-1"></i>Generar Informe Completo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-file-medical me-2"></i>Informe Médico</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="imprimirInforme()" style="display: none;" id="btn-imprimir">
+                                <i class="fas fa-print me-1"></i>Imprimir
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="informe-contenido">
+                                <p class="text-muted">Selecciona una mascota y genera el informe para ver los detalles médicos completos.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    
+    <!-- App Mode and Watermark -->
+    <script>
+        // Verificar modo de aplicación y mostrar watermark si es demo
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/app-config');
+                const config = await response.json();
+                
+                if (config.mode === 'demo') {
+                    // Agregar watermark para versión demo
+                    const watermark = document.createElement('div');
+                    watermark.id = 'demo-watermark';
+                    watermark.innerHTML = `
+                        <div class="alert alert-warning alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-2" style="z-index: 9999; max-width: 500px;">
+                            <i class="fas fa-eye me-2"></i>
+                            <strong>Versión Demo</strong> - ${config.watermark}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    document.body.appendChild(watermark);
+                    
+                    // Auto-hide después de 10 segundos
+                    setTimeout(() => {
+                        const alert = document.querySelector('#demo-watermark .alert');
+                        if (alert) {
+                            const bsAlert = new bootstrap.Alert(alert);
+                            bsAlert.close();
+                        }
+                    }, 10000);
+                }
+                
+                // Mostrar límites en el dashboard si es demo
+                if (config.mode === 'demo') {
+                    updateDashboardWithLimits(config.limits);
+                }
+                
+            } catch (error) {
+                console.error('Error obteniendo configuración de la app:', error);
+            }
+        });
+        
+        // Función para actualizar dashboard con límites de demo
+        function updateDashboardWithLimits(limits) {
+            const dashboardSection = document.getElementById('dashboard');
+            if (dashboardSection) {
+                const limitsCard = `
+                    <div class="col-md-12 mb-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Límites de Versión Demo
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <div class="text-warning">
+                                            <i class="fas fa-users fa-2x"></i>
+                                            <h6 class="mt-2">Clientes</h6>
+                                            <span class="badge bg-warning text-dark">${limits.clients} máximo</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-warning">
+                                            <i class="fas fa-paw fa-2x"></i>
+                                            <h6 class="mt-2">Mascotas</h6>
+                                            <span class="badge bg-warning text-dark">${limits.pets} máximo</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-warning">
+                                            <i class="fas fa-stethoscope fa-2x"></i>
+                                            <h6 class="mt-2">Consultas</h6>
+                                            <span class="badge bg-warning text-dark">${limits.consultations} máximo</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-warning">
+                                            <i class="fas fa-syringe fa-2x"></i>
+                                            <h6 class="mt-2">Vacunas</h6>
+                                            <span class="badge bg-warning text-dark">${limits.vaccines} máximo</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="text-center">
+                                    <button class="btn btn-primary" onclick="showUpgradeModal()">
+                                        <i class="fas fa-crown me-2"></i>Actualizar a Versión Completa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const dashboardRow = dashboardSection.querySelector('.row');
+                if (dashboardRow) {
+                    dashboardRow.insertAdjacentHTML('afterbegin', limitsCard);
+                }
+            }
+        }
+        
+        // Función para mostrar modal de actualización
+        function showUpgradeModal() {
+            const upgradeModal = `
+                <div class="modal fade" id="upgradeModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-crown me-2"></i>Actualizar a Versión Completa
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    La versión completa incluye:
+                                </div>
+                                <ul class="list-group list-group-flush mb-3">
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Clientes ilimitados</li>
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Mascotas ilimitadas</li>
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Consultas ilimitadas</li>
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Análisis y vacunas ilimitados</li>
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Sin marca de agua</li>
+                                    <li class="list-group-item"><i class="fas fa-check text-success me-2"></i>Soporte prioritario</li>
+                                </ul>
+                                <div class="mb-3">
+                                    <label class="form-label">Clave de Acceso</label>
+                                    <input type="text" class="form-control" id="upgradeAccessKey" placeholder="MUNDOPATAS-2024-PREMIUM-XXX">
+                                </div>
+                                <div id="upgrade-error" class="alert alert-danger" style="display: none;"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" onclick="validateUpgradeKey()">
+                                    <i class="fas fa-unlock me-1"></i>Activar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', upgradeModal);
+            const modal = new bootstrap.Modal(document.getElementById('upgradeModal'));
+            modal.show();
+        }
+        
+        // Función para validar clave de actualización
+        async function validateUpgradeKey() {
+            const accessKey = document.getElementById('upgradeAccessKey').value.trim();
+            const errorDiv = document.getElementById('upgrade-error');
+            
+            if (!accessKey) {
+                errorDiv.textContent = 'Por favor ingresa una clave de acceso';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/validate-access-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessKey })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    localStorage.setItem('accessKey', accessKey);
+                    localStorage.setItem('appMode', 'full');
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('upgradeModal'));
+                    modal.hide();
+                    
+                    alert('¡Actualización exitosa! Recargando sistema...');
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = result.error;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+    <script>
+        // Verificar autenticación al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                alert('Debes iniciar sesión para acceder al sistema.');
+                window.location.href = '/';
+                return;
+            }
+            
+            // Mostrar información del usuario en la navbar
+            const userData = JSON.parse(user);
+            const navbarBrand = document.querySelector('.navbar-brand');
+            navbarBrand.innerHTML = `
+                <i class="fas fa-paw me-2"></i>
+                MUNDO PATAS - ${userData.nombre_veterinaria}
+            `;
+            
+            // Agregar botón de logout
+            const navbarNav = document.querySelector('.navbar-nav');
+            navbarNav.innerHTML += `
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
+                    </a>
+                </li>
+            `;
+        });
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            alert('Sesión cerrada exitosamente.');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

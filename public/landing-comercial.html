@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Sistema Veterinario Profesional</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .btn-cta {
+            background: #ff6b6b;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+        }
+        
+        .btn-cta:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .features-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .pricing-section {
+            padding: 80px 0;
+            background: white;
+        }
+        
+        .pricing-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pricing-card.popular {
+            transform: scale(1.05);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .pricing-card.popular::before {
+            content: "MÁS POPULAR";
+            position: absolute;
+            top: 20px;
+            right: -30px;
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 40px;
+            transform: rotate(45deg);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .price {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .testimonials-section {
+            padding: 80px 0;
+            background: #667eea;
+            color: white;
+        }
+        
+        .testimonial-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stats-section {
+            padding: 60px 0;
+            background: #2c3e50;
+            color: white;
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #ff6b6b;
+        }
+        
+        .cta-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .demo-video {
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: rgba(102, 126, 234, 0.95); backdrop-filter: blur(10px);">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#"><i class="fas fa-paw me-2"></i>MUNDO PATAS</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#funcionalidades">Funcionalidades</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#precios">Precios</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#testimonios">Testimonios</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contacto">Contacto</a></li>
+                    <li class="nav-item"><a class="nav-link btn btn-outline-light ms-2 px-3" href="#demo">Ver Demo</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <h1 class="hero-title">MUNDO PATAS</h1>
+                    <p class="hero-subtitle">El Sistema Veterinario Más Completo del Mercado</p>
+                    <p class="lead mb-4">Gestiona tu clínica veterinaria con tecnología de vanguardia. Desde consultas hasta telemedicina, todo en una sola plataforma.</p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="#demo" class="btn btn-cta btn-lg">
+                            <i class="fas fa-play me-2"></i>Ver Demo Gratuito
+                        </a>
+                        <a href="#precios" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-rocket me-2"></i>Empezar Ahora
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-3 mb-4">
+                    <div class="stat-number">500+</div>
+                    <p>Veterinarias Confiando</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-number">50K+</div>
+                    <p>Mascotas Registradas</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-number">99.9%</div>
+                    <p>Tiempo de Actividad</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-number">24/7</div>
+                    <p>Soporte Técnico</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="funcionalidades" class="features-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-4 fw-bold mb-3">Funcionalidades Completas</h2>
+                <p class="lead">Todo lo que necesitas para gestionar tu veterinaria de manera profesional</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-users"></i></div>
+                        <h4>Gestión de Clientes</h4>
+                        <p>Registro completo de clientes y sus mascotas con historial médico detallado.</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-stethoscope"></i></div>
+                        <h4>Consultas Médicas</h4>
+                        <p>Registro de consultas, diagnósticos, tratamientos y seguimiento completo.</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-flask"></i></div>
+                        <h4>Análisis Clínicos</h4>
+                        <p>Gestión de estudios, análisis de laboratorio y archivos adjuntos.</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-syringe"></i></div>
+                        <h4>Control de Vacunas</h4>
+                        <p>Calendario de vacunación automático con recordatorios y alertas.</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+                        <h4>Portal del Paciente</h4>
+                        <p>Los clientes pueden acceder a los informes médicos de sus mascotas.</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                        <h4>Reportes Avanzados</h4>
+                        <p>Informes médicos completos, estadísticas y análisis de rendimiento.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Video Section -->
+    <section id="demo" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-4 fw-bold mb-3">Ve MUNDO PATAS en Acción</h2>
+                <p class="lead">Descubre cómo nuestro sistema puede transformar tu veterinaria</p>
+            </div>
+            
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="ratio ratio-16x9">
+                        <div class="demo-video d-flex align-items-center justify-content-center bg-light">
+                            <div class="text-center">
+                                <i class="fas fa-play-circle" style="font-size: 4rem; color: #667eea; margin-bottom: 20px;"></i>
+                                <h4>Video Demo Interactivo</h4>
+                                <p>Haz clic para ver el sistema en funcionamiento</p>
+                                <button class="btn btn-primary btn-lg" onclick="window.open('http://localhost:3000', '_blank')">
+                                    <i class="fas fa-external-link-alt me-2"></i>Probar Sistema en Vivo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="precios" class="pricing-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-4 fw-bold mb-3">Planes Diseñados para Ti</h2>
+                <p class="lead">Elige el plan que mejor se adapte a tu veterinaria</p>
+            </div>
+            
+            <div class="row g-4 justify-content-center">
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card">
+                        <h3>Básico</h3>
+                        <div class="price">$49<small>/mes</small></div>
+                        <ul class="list-unstyled mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>1 Veterinario</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Hasta 100 Mascotas</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Gestión Básica</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Portal del Paciente</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Soporte por Email</li>
+                        </ul>
+                        <button class="btn btn-outline-primary w-100">Empezar Prueba</button>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card popular">
+                        <h3>Profesional</h3>
+                        <div class="price">$99<small>/mes</small></div>
+                        <ul class="list-unstyled mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>3 Veterinarios</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Hasta 500 Mascotas</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Todas las Funciones</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Reportes Avanzados</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Soporte Prioritario</li>
+                        </ul>
+                        <button class="btn btn-primary w-100">Empezar Prueba</button>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card">
+                        <h3>Clínica</h3>
+                        <div class="price">$199<small>/mes</small></div>
+                        <ul class="list-unstyled mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>Veterinarios Ilimitados</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Mascotas Ilimitadas</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Telemedicina</li>
+                            <li><i class="fas fa-check text-success me-2"></i>API Personalizada</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Soporte 24/7</li>
+                        </ul>
+                        <button class="btn btn-outline-primary w-100">Contactar Ventas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonios" class="testimonials-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-4 fw-bold mb-3">Lo Que Dicen Nuestros Clientes</h2>
+                <p class="lead">Veterinarios de todo el país confían en MUNDO PATAS</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="testimonial-card">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p>"MUNDO PATAS revolucionó nuestra clínica. El portal del paciente es increíble, nuestros clientes están encantados."</p>
+                        <div class="mt-3">
+                            <strong>Dra. María González</strong><br>
+                            <small>Clínica Veterinaria San Martín</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="testimonial-card">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p>"La gestión de historiales médicos nunca fue tan fácil. Ahorro 3 horas diarias en administración."</p>
+                        <div class="mt-3">
+                            <strong>Dr. Carlos Rodríguez</strong><br>
+                            <small>Hospital Veterinario Central</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="testimonial-card">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <p>"El soporte técnico es excepcional. Implementación rápida y sin complicaciones."</p>
+                        <div class="mt-3">
+                            <strong>Dra. Ana López</strong><br>
+                            <small>Clínica Veterinaria Los Andes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h2 class="display-4 fw-bold mb-3">¿Listo para Transformar tu Veterinaria?</h2>
+                    <p class="lead mb-4">Únete a cientos de veterinarios que ya confían en MUNDO PATAS</p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="mailto:jjvserviciosinformaticos@gmail.com" class="btn btn-light btn-lg">
+                            <i class="fas fa-envelope me-2"></i>Contactar Ventas
+                        </a>
+                        <a href="https://wa.me/1234567890" class="btn btn-outline-light btn-lg">
+                            <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h5><i class="fas fa-paw me-2"></i>MUNDO PATAS</h5>
+                    <p>El sistema veterinario más completo y fácil de usar del mercado.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-light"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Producto</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#funcionalidades" class="text-light-50">Funcionalidades</a></li>
+                        <li><a href="#precios" class="text-light-50">Precios</a></li>
+                        <li><a href="#demo" class="text-light-50">Demo</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Soporte</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-light-50">Documentación</a></li>
+                        <li><a href="#" class="text-light-50">Tutoriales</a></li>
+                        <li><a href="#" class="text-light-50">Contacto</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <h6>Contacto</h6>
+                    <p><i class="fas fa-envelope me-2"></i>jjvserviciosinformaticos@gmail.com</p>
+                    <p><i class="fas fa-phone me-2"></i>+54 9 11 1234-5678</p>
+                    <p><i class="fas fa-map-marker-alt me-2"></i>Buenos Aires, Argentina</p>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2024 MUNDO PATAS. Todos los derechos reservados.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-light-50 me-3">Términos</a>
+                    <a href="#" class="text-light-50">Privacidad</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Smooth Scrolling -->
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

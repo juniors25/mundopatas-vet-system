@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "name": "mundo-patas-veterinaria",
+  "builds": [
+    {
+      "src": "server-postgres.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server-postgres.js"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/uploads/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server-postgres.js": {
+      "maxDuration": 10
+    }
+  }
+}

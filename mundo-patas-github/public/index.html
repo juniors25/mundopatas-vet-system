@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Clínica Veterinaria</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body class="landing-page">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="container">
+                <div class="row justify-content-center text-center">
+                    <div class="col-lg-8">
+                        <div class="hero-logo mb-4">
+                            <i class="fas fa-paw"></i>
+                        </div>
+                        <h1 class="hero-title">MUNDO PATAS</h1>
+                        <p class="hero-subtitle">Tu clínica veterinaria de confianza</p>
+                        <p class="hero-description">
+                            Cuidamos a tus mascotas con amor y profesionalismo. 
+                            Sistema completo de gestión veterinaria para el bienestar de tu mejor amigo.
+                        </p>
+                        <div class="hero-buttons mt-5">
+                            <button class="btn btn-primary btn-lg me-3" onclick="accessDemoDirectly()">
+                                <i class="fas fa-rocket me-2"></i>Acceder al Sistema Demo
+                            </button>
+                            <button class="btn btn-outline-light btn-lg me-3" onclick="showRegisterModal()">
+                                <i class="fas fa-user-plus me-2"></i>Registrar Veterinaria
+                            </button>
+                            <a href="/paciente.html" class="btn btn-success btn-lg me-3">
+                                <i class="fas fa-paw me-2"></i>Portal Paciente
+                            </a>
+                            <a href="/manual-usuario.html" class="btn btn-warning btn-lg" target="_blank">
+                                <i class="fas fa-question-circle me-2"></i>Ayuda
+                            </a>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-light">
+                                🚀 <strong>VERSIÓN DEMO:</strong> Máximo 3 clientes • Sin contraseñas • Datos precargados
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Card Floating -->
+    <div class="contact-card-floating">
+        <div class="contact-card">
+            <div class="contact-header">
+                <i class="fas fa-code me-2"></i>
+                <strong>Desarrollador</strong>
+            </div>
+            <div class="contact-body">
+                <div class="contact-item">
+                    <i class="fas fa-user me-2"></i>
+                    <span>Gastón Díaz</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-phone me-2"></i>
+                    <a href="tel:2617024193">2617024193</a>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-envelope me-2"></i>
+                    <a href="mailto:jjvserviciosinformaticos@gmail.com">jjvserviciosinformaticos@gmail.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="section-title">Nuestros Servicios</h2>
+                    <p class="section-subtitle">Todo lo que necesitas para el cuidado integral de tu mascota</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <h4>Consultas Médicas</h4>
+                        <p>Atención veterinaria profesional con diagnósticos precisos y tratamientos especializados.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-flask"></i>
+                        </div>
+                        <h4>Análisis Clínicos</h4>
+                        <p>Laboratorio completo con análisis de sangre, orina y estudios especializados.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <h4>Vacunación</h4>
+                        <p>Plan completo de vacunación y control preventivo para mantener a tu mascota saludable.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="loginUser()">
+                        <i class="fas fa-sign-in-alt me-1"></i>Ingresar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Registrar Veterinaria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label for="registerNombreVeterinaria" class="form-label">Nombre de la Veterinaria</label>
+                            <input type="text" class="form-control" id="registerNombreVeterinaria" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerNombreVeterinario" class="form-label">Nombre del Veterinario</label>
+                            <input type="text" class="form-control" id="registerNombreVeterinario" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerTelefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="registerTelefono">
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerDireccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="registerDireccion">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="registerCliente()">
+                        <i class="fas fa-save me-1"></i>Registrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Access Key Modal -->
+    <div id="access-key-modal-container"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="demo-data.js"></script>
+    <script>
+        function showLoginModal() {
+            const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+            modal.show();
+        }
+
+        function showRegisterModal() {
+            const modal = new bootstrap.Modal(document.getElementById('registerModal'));
+            modal.show();
+        }
+
+        async function loginUser() {
+            const form = document.getElementById('login-form');
+            const formData = new FormData(form);
+            
+            const loginData = {
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    // Limpiar formulario de login
+                    form.reset();
+                    
+                    alert('¡Bienvenido a MUNDO PATAS!');
+                    window.location.href = '/sistema.html';
+                } else {
+                    alert('Email o contraseña incorrectos.');
+                }
+            } catch (error) {
+                alert('Error de conexión. Por favor intenta nuevamente.');
+            }
+        }
+
+        async function registerCliente() {
+            const nombre_veterinaria = document.getElementById('registerNombreVeterinaria').value.trim();
+            const nombre_veterinario = document.getElementById('registerNombreVeterinario').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const telefono = document.getElementById('registerTelefono').value.trim();
+            const direccion = document.getElementById('registerDireccion').value.trim();
+
+            if (!nombre_veterinaria || !nombre_veterinario || !email || !password) {
+                alert('Por favor completa todos los campos obligatorios');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            // Deshabilitar botón para evitar doble envío
+            const submitBtn = document.querySelector('#registerModal .btn-primary');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Registrando...';
+
+            try {
+                console.log('Enviando datos de registro:', { nombre_veterinaria, nombre_veterinario, email, telefono, direccion });
+                
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nombre_veterinaria,
+                        nombre_veterinario,
+                        email,
+                        password,
+                        telefono,
+                        direccion
+                    }),
+                });
+
+                console.log('Respuesta del servidor:', response.status);
+                const data = await response.json();
+                console.log('Datos recibidos:', data);
+
+                if (response.ok) {
+                    // Guardar token y datos del usuario
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    alert('¡Veterinaria registrada exitosamente! Redirigiendo al sistema...');
+                    
+                    // Limpiar formulario
+                    document.getElementById('register-form').reset();
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+                    if (modal) modal.hide();
+                    
+                    // Redireccionar al sistema
+                    setTimeout(() => {
+                        window.location.href = '/sistema.html';
+                    }, 1000);
+                } else {
+                    alert('Error: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error en registro:', error);
+                alert('Error de conexión. Verifica que el servidor esté funcionando.');
+            } finally {
+                // Restaurar botón
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Función para acceder a versión completa
+        async function accessFullVersion() {
+            // Mostrar modal directo sin cargar archivo externo
+            const accessKeyModal = `
+                <div class="modal fade" id="accessKeyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-key me-2"></i>Versión Completa - Clave de Acceso
+                                </h5>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Para acceder a la versión completa de MUNDO PATAS, ingresa tu clave de acceso y luego inicia sesión.
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Clave de Acceso</label>
+                                    <input type="text" class="form-control" id="accessKeyInput" placeholder="MUNDOPATAS-2024-PREMIUM-XXX" required>
+                                    <div class="form-text">Usa: MUNDOPATAS-2024-PREMIUM-001</div>
+                                </div>
+                                <div id="access-key-error" class="alert alert-danger" style="display: none;"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" onclick="switchToDemo()">
+                                    <i class="fas fa-eye me-1"></i>Usar Versión Demo
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="validateAccessKey()">
+                                    <i class="fas fa-unlock me-1"></i>Validar Clave
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', accessKeyModal);
+            const modal = new bootstrap.Modal(document.getElementById('accessKeyModal'));
+            modal.show();
+        }
+
+        // Función para validar clave de acceso
+        async function validateAccessKey() {
+            const accessKey = document.getElementById('accessKeyInput').value.trim();
+            const errorDiv = document.getElementById('access-key-error');
+            
+            if (!accessKey) {
+                showAccessKeyError('Por favor ingresa una clave de acceso');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/validate-access-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessKey })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    // Guardar clave válida en localStorage
+                    localStorage.setItem('accessKey', accessKey);
+                    localStorage.setItem('appMode', 'full');
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('accessKeyModal'));
+                    modal.hide();
+                    
+                    // Mostrar modal de login para versión completa
+                    setTimeout(() => {
+                        showLoginModal();
+                    }, 500);
+                } else {
+                    showAccessKeyError(result.error || 'Clave de acceso inválida');
+                }
+            } catch (error) {
+                showAccessKeyError('Error de conexión. Intenta nuevamente.');
+            }
+        }
+
+        // Función para mostrar error de clave de acceso
+        function showAccessKeyError(message) {
+            const errorDiv = document.getElementById('access-key-error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Función para cambiar a modo demo
+        function switchToDemo() {
+            localStorage.setItem('appMode', 'demo');
+            localStorage.removeItem('accessKey');
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('accessKeyModal'));
+            modal.hide();
+            
+            accessDemoVersion();
+        }
+
+        // Función para acceder a versión demo
+        async function accessDemoVersion() {
+            localStorage.setItem('appMode', 'demo');
+            localStorage.removeItem('accessKey');
+            
+            // Mostrar modal de login/registro para demo
+            const demoModal = `
+                <div class="modal fade" id="demoModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-eye me-2"></i>Versión Demo - MUNDO PATAS
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>¡Bienvenido a la versión demo!</strong><br>
+                                    Limitaciones: máximo 5 clientes, 15 mascotas total.
+                                </div>
+                                <div class="text-center">
+                                    <button class="btn btn-primary me-2" onclick="loginDemo()">
+                                        <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión Demo
+                                    </button>
+                                    <button class="btn btn-success" onclick="registerDemo()">
+                                        <i class="fas fa-user-plus me-1"></i>Registrar Demo
+                                    </button>
+                                </div>
+                                <hr>
+                                <div class="text-center">
+                                    <button class="btn btn-outline-secondary" onclick="loadDemoDataAndLogin()">
+                                        <i class="fas fa-database me-1"></i>Cargar Datos de Ejemplo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', demoModal);
+            const modal = new bootstrap.Modal(document.getElementById('demoModal'));
+            modal.show();
+        }
+
+        // Función para login demo
+        function loginDemo() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('demoModal'));
+            modal.hide();
+            showLoginModal();
+        }
+
+        // Función para registro demo
+        function registerDemo() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('demoModal'));
+            modal.hide();
+            showRegisterModal();
+        }
+
+        // Función para cargar datos demo y hacer login automático
+        async function loadDemoDataAndLogin() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('demoModal'));
+            modal.hide();
+            
+            // Mostrar loading
+            const loadingAlert = document.createElement('div');
+            loadingAlert.className = 'alert alert-info position-fixed top-0 start-50 translate-middle-x mt-3';
+            loadingAlert.style.zIndex = '9999';
+            loadingAlert.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Cargando datos de demostración...';
+            document.body.appendChild(loadingAlert);
+            
+            try {
+                await loadDemoData();
+                
+                // Login automático con credenciales demo
+                const loginResponse = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'demo@mundopatas.com',
+                        password: 'demo123'
+                    })
+                });
+                
+                if (loginResponse.ok) {
+                    const result = await loginResponse.json();
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    loadingAlert.remove();
+                    alert('¡Datos demo cargados! Redirigiendo al sistema...');
+                    window.location.href = '/sistema.html';
+                } else {
+                    throw new Error('Error en login automático');
+                }
+            } catch (error) {
+                loadingAlert.remove();
+                alert('Error cargando datos demo. Intenta el registro manual.');
+                console.error(error);
+            }
+        }
+
+        // Función para acceso directo al sistema demo
+        function accessDemoDirectly() {
+            // Mostrar loading
+            const loadingAlert = document.createElement('div');
+            loadingAlert.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+            loadingAlert.style.zIndex = '9999';
+            loadingAlert.innerHTML = '<i class="fas fa-rocket me-2"></i>Accediendo al sistema demo...';
+            document.body.appendChild(loadingAlert);
+            
+            // Simular token demo (sin autenticación real)
+            localStorage.setItem('demoMode', 'true');
+            localStorage.setItem('user', JSON.stringify({
+                id: 1,
+                nombre_veterinaria: 'MUNDO PATAS DEMO',
+                nombre_veterinario: 'Dr. Gastón Díaz',
+                email: 'demo@mundopatas.com'
+            }));
+            
+            setTimeout(() => {
+                loadingAlert.remove();
+                window.location.href = '/sistema.html';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!-- Modal para clave de acceso -->
+<div class="modal fade" id="accessKeyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-key me-2"></i>Versión Completa - Clave de Acceso
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Para acceder a la versión completa de MUNDO PATAS, ingresa tu clave de acceso.
+                </div>
+                <form id="access-key-form">
+                    <div class="mb-3">
+                        <label class="form-label">Clave de Acceso</label>
+                        <input type="text" class="form-control" id="accessKeyInput" placeholder="MUNDOPATAS-2024-PREMIUM-XXX" required>
+                        <div class="form-text">Contacta al administrador para obtener una clave válida.</div>
+                    </div>
+                </form>
+                <div id="access-key-error" class="alert alert-danger" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="switchToDemo()">
+                    <i class="fas fa-eye me-1"></i>Usar Versión Demo
+                </button>
+                <button type="button" class="btn btn-primary" onclick="validateAccessKey()">
+                    <i class="fas fa-unlock me-1"></i>Validar Clave
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función para mostrar modal de clave de acceso
+function showAccessKeyModal() {
+    const modal = new bootstrap.Modal(document.getElementById('accessKeyModal'));
+    modal.show();
+}
+
+// Función para validar clave de acceso
+async function validateAccessKey() {
+    const accessKey = document.getElementById('accessKeyInput').value.trim();
+    const errorDiv = document.getElementById('access-key-error');
+    
+    if (!accessKey) {
+        showAccessKeyError('Por favor ingresa una clave de acceso');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/validate-access-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessKey })
+        });
+        
+        const result = await response.json();
+        
+        if (result.valid) {
+            // Guardar clave válida en localStorage
+            localStorage.setItem('accessKey', accessKey);
+            localStorage.setItem('appMode', 'full');
+            
+            console.log('✅ Clave válida, redirigiendo...');
+            
+            // Redirigir inmediatamente
+            window.location.replace('/sistema.html');
+        } else {
+            showAccessKeyError(result.error || 'Clave de acceso inválida');
+        }
+    } catch (error) {
+        showAccessKeyError('Error de conexión. Intenta nuevamente.');
+    }
+}
+
+// Función para mostrar error de clave de acceso
+function showAccessKeyError(message) {
+    const errorDiv = document.getElementById('access-key-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// Función para cambiar a modo demo
+function switchToDemo() {
+    localStorage.setItem('appMode', 'demo');
+    localStorage.removeItem('accessKey');
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('accessKeyModal'));
+    modal.hide();
+    
+    window.location.reload();
+}
+
+// Verificar modo de aplicación al cargar
+document.addEventListener('DOMContentLoaded', function() {
+    const appMode = localStorage.getItem('appMode');
+    const accessKey = localStorage.getItem('accessKey');
+    
+    // Si no hay modo definido, mostrar modal
+    if (!appMode) {
+        setTimeout(showAccessKeyModal, 1000);
+    }
+    
+    // Si está en modo completo pero no hay clave, mostrar modal
+    if (appMode === 'full' && !accessKey) {
+        setTimeout(showAccessKeyModal, 1000);
+    }
+});
+</script>
