@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "mundopatas-vet-system",
+  "name": "mundopatas-veterinaria-2024",
   "builds": [
     {
       "src": "api/server.js",
