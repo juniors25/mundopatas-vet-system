@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "name": "mundopatas-veterinaria-2024",
-  "builds": [
+  "functions": {
+    "api/server.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
     {
-      "src": "api/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**/*",
-      "use": "@vercel/static"
+      "source": "/api/(.*)",
+      "destination": "/api/server"
     }
   ],
   "routes": [
@@ -17,15 +17,8 @@
       "dest": "/api/server.js"
     },
     {
-      "src": "/uploads/(.*)",
-      "dest": "/uploads/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

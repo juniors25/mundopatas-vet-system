@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { Pool } = require('pg');
 
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
@@ -11,6 +12,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CORS para Vercel
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
 
 // Configurar multer para subida de archivos
 const storage = multer.diskStorage({
@@ -29,13 +42,111 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Base de datos en memoria para demo (en producción usar PostgreSQL)
-let veterinarios = [];
-let clientes = [];
-let mascotas = [];
-let consultas = [];
-let analisis = [];
-let vacunas = [];
+// Configuración PostgreSQL - Railway Private Network
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Inicializar base de datos
+async function initializeDatabase() {
+    try {
+        // Crear tablas si no existen
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS veterinarios (
+                id SERIAL PRIMARY KEY,
+                nombre_veterinario VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                telefono VARCHAR(50),
+                direccion TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS clientes (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                nombre VARCHAR(255) NOT NULL,
+                apellido VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                telefono VARCHAR(50),
+                direccion TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS mascotas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                nombre VARCHAR(255) NOT NULL,
+                especie VARCHAR(100),
+                raza VARCHAR(100),
+                edad INTEGER,
+                peso DECIMAL(5,2),
+                color VARCHAR(100),
+                sexo VARCHAR(20),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS consultas (
+                id SERIAL PRIMARY KEY,
+                mascota_id INTEGER REFERENCES mascotas(id),
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                motivo TEXT,
+                diagnostico TEXT,
+                tratamiento TEXT,
+                peso_actual DECIMAL(5,2),
+                temperatura DECIMAL(4,1),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS analisis (
+                id SERIAL PRIMARY KEY,
+                mascota_id INTEGER REFERENCES mascotas(id),
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                tipo_analisis VARCHAR(255),
+                resultados TEXT,
+                archivo_url VARCHAR(500),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS vacunas (
+                id SERIAL PRIMARY KEY,
+                mascota_id INTEGER REFERENCES mascotas(id),
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                nombre_vacuna VARCHAR(255),
+                fecha_aplicacion DATE,
+                proxima_dosis DATE,
+                lote VARCHAR(100),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Sistema de datos demo por veterinario - NO insertar datos globales
+        console.log('✅ Base de datos inicializada - Sistema multi-veterinario');
+
+        console.log('✅ Base de datos PostgreSQL inicializada correctamente');
+    } catch (error) {
+        console.error('❌ Error inicializando base de datos:', error);
+    }
+}
+
+// Inicializar al arrancar
+initializeDatabase();
 
 // Middleware de autenticación
 function authenticateToken(req, res, next) {
@@ -56,34 +167,24 @@ function authenticateToken(req, res, next) {
 }
 
 // RUTAS DE AUTENTICACIÓN
-app.post('/api/auth/register', async (req, res) => {
-    const { nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion } = req.body;
+app.post('/api/register', async (req, res) => {
+    const { nombre_veterinario, email, password, telefono, direccion } = req.body;
 
     try {
-        // Verificar si el email ya existe
-        const existingUser = veterinarios.find(v => v.email === email);
+        const existingUser = await pool.query('SELECT id FROM veterinarios WHERE email = $1', [email]);
         
-        if (existingUser) {
+        if (existingUser.rows.length > 0) {
             return res.status(400).json({ error: 'El email ya está registrado' });
         }
 
-        // Encriptar contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const result = await pool.query(`
+            INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5) RETURNING id, email, nombre_veterinario
+        `, [nombre_veterinario, email, hashedPassword, telefono, direccion]);
 
-        // Crear nuevo veterinario
-        const newVet = {
-            id: veterinarios.length + 1,
-            nombre_veterinaria,
-            nombre_veterinario,
-            email,
-            password: hashedPassword,
-            telefono,
-            direccion,
-            created_at: new Date()
-        };
-
-        veterinarios.push(newVet);
-
+        const newVet = result.rows[0];
         const token = jwt.sign({ id: newVet.id, email: newVet.email }, JWT_SECRET, { expiresIn: '24h' });
 
         res.json({
@@ -105,12 +206,13 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = veterinarios.find(v => v.email === email);
+        const result = await pool.query('SELECT * FROM veterinarios WHERE email = $1', [email]);
         
-        if (!user) {
+        if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        const user = result.rows[0];
         const validPassword = await bcrypt.compare(password, user.password);
 
         if (!validPassword) {
@@ -139,19 +241,15 @@ app.post('/api/clientes', authenticateToken, async (req, res) => {
     const { nombre, apellido, email, telefono, direccion } = req.body;
 
     try {
-        const newCliente = {
-            id: clientes.length + 1,
-            veterinario_id: req.user.id,
-            nombre,
-            apellido,
-            email,
-            telefono,
-            direccion,
-            created_at: new Date()
-        };
+        const result = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [req.user.id, nombre, apellido, email, telefono, direccion]);
 
-        clientes.push(newCliente);
-        res.json({ message: 'Cliente registrado exitosamente', cliente: newCliente });
+        res.status(201).json({ 
+            message: 'Cliente registrado exitosamente', 
+            cliente: result.rows[0] 
+        });
     } catch (error) {
         console.error('Error registrando cliente:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -160,10 +258,41 @@ app.post('/api/clientes', authenticateToken, async (req, res) => {
 
 app.get('/api/clientes', authenticateToken, async (req, res) => {
     try {
-        const clientesVet = clientes.filter(c => c.veterinario_id === req.user.id);
-        res.json(clientesVet);
+        const result = await pool.query(
+            'SELECT * FROM clientes WHERE veterinario_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        res.json(result.rows);
     } catch (error) {
         console.error('Error obteniendo clientes:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+app.get('/api/clientes-con-mascotas', authenticateToken, async (req, res) => {
+    try {
+        const clientesResult = await pool.query(
+            'SELECT * FROM clientes WHERE veterinario_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        
+        const clientesConMascotas = [];
+        
+        for (const cliente of clientesResult.rows) {
+            const mascotasResult = await pool.query(
+                'SELECT * FROM mascotas WHERE cliente_id = $1 ORDER BY created_at DESC',
+                [cliente.id]
+            );
+            
+            clientesConMascotas.push({
+                ...cliente,
+                mascotas: mascotasResult.rows
+            });
+        }
+        
+        res.json(clientesConMascotas);
+    } catch (error) {
+        console.error('Error obteniendo clientes con mascotas:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -173,29 +302,25 @@ app.post('/api/mascotas', authenticateToken, async (req, res) => {
     const { cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones } = req.body;
 
     try {
-        const cliente = clientes.find(c => c.id == cliente_id && c.veterinario_id === req.user.id);
+        // Verificar que el cliente existe y pertenece al veterinario
+        const clienteResult = await pool.query(
+            'SELECT * FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [cliente_id, req.user.id]
+        );
         
-        if (!cliente) {
+        if (clienteResult.rows.length === 0) {
             return res.status(403).json({ error: 'No tienes permiso para agregar mascotas a este cliente' });
         }
 
-        const newMascota = {
-            id: mascotas.length + 1,
-            veterinario_id: req.user.id,
-            cliente_id: parseInt(cliente_id),
-            nombre,
-            especie,
-            raza,
-            edad,
-            peso,
-            color,
-            sexo,
-            observaciones,
-            created_at: new Date()
-        };
+        const result = await pool.query(`
+            INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+        `, [req.user.id, cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones]);
 
-        mascotas.push(newMascota);
-        res.json({ message: 'Mascota registrada exitosamente', mascota: newMascota });
+        res.status(201).json({ 
+            message: 'Mascota registrada exitosamente', 
+            mascota: result.rows[0] 
+        });
     } catch (error) {
         console.error('Error registrando mascota:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -204,15 +329,11 @@ app.post('/api/mascotas', authenticateToken, async (req, res) => {
 
 app.get('/api/mascotas', authenticateToken, async (req, res) => {
     try {
-        const mascotasVet = mascotas.filter(m => m.veterinario_id === req.user.id).map(m => {
-            const cliente = clientes.find(c => c.id === m.cliente_id);
-            return {
-                ...m,
-                cliente_nombre: cliente?.nombre || '',
-                cliente_apellido: cliente?.apellido || ''
-            };
-        });
-        res.json(mascotasVet);
+        const result = await pool.query(
+            'SELECT * FROM mascotas WHERE veterinario_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        res.json(result.rows);
     } catch (error) {
         console.error('Error obteniendo mascotas:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -232,24 +353,29 @@ app.post('/api/paciente/buscar', async (req, res) => {
         const nombre = partes[0];
         const apellido = partes.slice(1).join(' ') || '';
         
-        let cliente = clientes.find(c => 
-            c.nombre.toLowerCase().includes(nombre.toLowerCase()) && 
-            c.apellido.toLowerCase().includes(apellido.toLowerCase())
-        );
+        let query = 'SELECT * FROM clientes WHERE nombre ILIKE $1 AND apellido ILIKE $2';
+        let params = [`%${nombre}%`, `%${apellido}%`];
         
         if (email) {
-            cliente = clientes.find(c => c.email === email);
+            query += ' AND email = $3';
+            params.push(email);
         }
         
-        if (!cliente) {
+        const clienteResult = await pool.query(query, params);
+        
+        if (clienteResult.rows.length === 0) {
             return res.status(404).json({ error: 'Cliente no encontrado' });
         }
         
-        const mascotasCliente = mascotas.filter(m => m.cliente_id === cliente.id);
+        const cliente = clienteResult.rows[0];
+        const mascotasResult = await pool.query(
+            'SELECT * FROM mascotas WHERE cliente_id = $1 ORDER BY created_at DESC',
+            [cliente.id]
+        );
         
         res.json({
             cliente: cliente,
-            mascotas: mascotasCliente
+            mascotas: mascotasResult.rows
         });
     } catch (error) {
         console.error('Error buscando cliente:', error);
@@ -261,32 +387,137 @@ app.get('/api/paciente/informe/:mascotaId', async (req, res) => {
     const mascotaId = parseInt(req.params.mascotaId);
     
     try {
-        const mascota = mascotas.find(m => m.id === mascotaId);
+        const mascotaResult = await pool.query(`
+            SELECT m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.telefono, c.email
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1
+        `, [mascotaId]);
         
-        if (!mascota) {
+        if (mascotaResult.rows.length === 0) {
             return res.status(404).json({ error: 'Mascota no encontrada' });
         }
 
-        const cliente = clientes.find(c => c.id === mascota.cliente_id);
-        const consultasMascota = consultas.filter(c => c.mascota_id === mascotaId);
-        const analisisMascota = analisis.filter(a => a.mascota_id === mascotaId);
-        const vacunasMascota = vacunas.filter(v => v.mascota_id === mascotaId);
+        const mascota = mascotaResult.rows[0];
+        
+        const [consultasResult, analisisResult, vacunasResult] = await Promise.all([
+            pool.query('SELECT * FROM consultas WHERE mascota_id = $1 ORDER BY created_at DESC', [mascotaId]),
+            pool.query('SELECT * FROM analisis WHERE mascota_id = $1 ORDER BY created_at DESC', [mascotaId]),
+            pool.query('SELECT * FROM vacunas WHERE mascota_id = $1 ORDER BY created_at DESC', [mascotaId])
+        ]);
 
         res.json({
-            mascota: {
-                ...mascota,
-                cliente_nombre: cliente?.nombre || '',
-                cliente_apellido: cliente?.apellido || '',
-                telefono: cliente?.telefono || '',
-                email: cliente?.email || ''
-            },
-            consultas: consultasMascota,
-            analisis: analisisMascota,
-            vacunas: vacunasMascota
+            mascota,
+            consultas: consultasResult.rows,
+            analisis: analisisResult.rows,
+            vacunas: vacunasResult.rows
         });
     } catch (error) {
         console.error('Error generando informe para paciente:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Endpoint para configuración de la app
+app.get('/api/app-config', (req, res) => {
+    res.json({
+        mode: 'demo',
+        config: {
+            MAX_CLIENTS: 10,
+            MAX_PETS_PER_CLIENT: 5,
+            MAX_CONSULTATIONS: 20,
+            MAX_ANALYSIS: 10,
+            MAX_VACCINES: 15,
+            FEATURES_DISABLED: [],
+            DEMO_DATA_ENABLED: true,
+            WATERMARK_ENABLED: true
+        },
+        watermark: '🚀 VERSIÓN DEMO - MUNDO PATAS'
+    });
+});
+
+// Login demo directo - Crear veterinario demo único por sesión
+app.post('/api/demo-login', async (req, res) => {
+    try {
+        // Crear veterinario demo único con timestamp
+        const timestamp = Date.now();
+        const demoEmail = `demo-${timestamp}@mundopatas.com`;
+        const hashedPassword = await bcrypt.hash('demo123', 10);
+        
+        const newUser = await pool.query(`
+            INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5) RETURNING *
+        `, [`Dr. Demo ${timestamp}`, demoEmail, hashedPassword, '2617024193', 'Clínica MUNDO PATAS - Demo']);
+
+        const user = newUser.rows[0];
+        
+        // Crear datos demo para este veterinario
+        await createDemoData(user.id);
+        
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({
+            message: 'Acceso demo exitoso - Datos precargados',
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre_veterinario
+            }
+        });
+    } catch (error) {
+        console.error('Error en demo login:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Función para crear datos demo por veterinario
+async function createDemoData(veterinarioId) {
+    try {
+        // Crear clientes demo
+        const cliente1 = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [veterinarioId, 'María', 'González', 'maria.gonzalez@email.com', '2617123456', 'Av. San Martín 123']);
+        
+        const cliente2 = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [veterinarioId, 'Carlos', 'Rodríguez', 'carlos.rodriguez@email.com', '2617654321', 'Calle Belgrano 456']);
+        
+        // Crear mascotas demo
+        await pool.query(`
+            INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [veterinarioId, cliente1.rows[0].id, 'Max', 'Perro', 'Labrador', 3, 25.5, 'Dorado', 'Macho']);
+        
+        await pool.query(`
+            INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [veterinarioId, cliente2.rows[0].id, 'Luna', 'Gato', 'Persa', 2, 4.2, 'Blanco', 'Hembra']);
+        
+        console.log(`✅ Datos demo creados para veterinario ${veterinarioId}`);
+    } catch (error) {
+        console.error('Error creando datos demo:', error);
+    }
+}
+
+// Endpoint para validar clave de acceso
+app.post('/api/validate-access-key', (req, res) => {
+    const { accessKey } = req.body;
+    
+    const validKeys = [
+        'MUNDOPATAS-2024-PREMIUM-001',
+        'MUNDOPATAS-2024-PREMIUM-002',
+        'MUNDOPATAS-2024-PREMIUM-003',
+        'MUNDOPATAS-2024-PREMIUM-004',
+        'MUNDOPATAS-2024-PREMIUM-005'
+    ];
+    
+    if (validKeys.includes(accessKey)) {
+        res.json({ valid: true, message: 'Clave de acceso válida' });
+    } else {
+        res.status(401).json({ valid: false, error: 'Clave de acceso inválida. Contacta al administrador para obtener una clave válida.' });
     }
 });
 
