@@ -42,61 +42,63 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Base de datos SQLite para funcionamiento estable
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// Configuración PostgreSQL - Railway
+const { Pool } = require('pg');
 
-// Crear conexión a la base de datos SQLite
-const dbPath = path.join('/tmp', 'veterinaria.db');
-const db = new sqlite3.Database(dbPath);
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Inicializar base de datos SQLite
-function initializeDatabase() {
-    db.serialize(() => {
-        // Tabla de veterinarios
-        db.run(`CREATE TABLE IF NOT EXISTS veterinarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre_veterinario TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            telefono TEXT,
-            direccion TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+// Inicializar base de datos PostgreSQL
+async function initializeDatabase() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS veterinarios (
+                id SERIAL PRIMARY KEY,
+                nombre_veterinario VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                telefono VARCHAR(50),
+                direccion TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-        // Tabla de clientes
-        db.run(`CREATE TABLE IF NOT EXISTS clientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            veterinario_id INTEGER,
-            nombre TEXT NOT NULL,
-            apellido TEXT NOT NULL,
-            email TEXT,
-            telefono TEXT,
-            direccion TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (veterinario_id) REFERENCES veterinarios (id)
-        )`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS clientes (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                nombre VARCHAR(255) NOT NULL,
+                apellido VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                telefono VARCHAR(50),
+                direccion TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-        // Tabla de mascotas
-        db.run(`CREATE TABLE IF NOT EXISTS mascotas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            veterinario_id INTEGER,
-            cliente_id INTEGER,
-            nombre TEXT NOT NULL,
-            especie TEXT,
-            raza TEXT,
-            edad INTEGER,
-            peso REAL,
-            color TEXT,
-            sexo TEXT,
-            observaciones TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (veterinario_id) REFERENCES veterinarios (id),
-            FOREIGN KEY (cliente_id) REFERENCES clientes (id)
-        )`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS mascotas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                nombre VARCHAR(255) NOT NULL,
+                especie VARCHAR(100),
+                raza VARCHAR(100),
+                edad INTEGER,
+                peso DECIMAL(5,2),
+                color VARCHAR(100),
+                sexo VARCHAR(20),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-        console.log('✅ Base de datos SQLite inicializada correctamente');
-    });
+        console.log('✅ Base de datos PostgreSQL inicializada correctamente');
+    } catch (error) {
+        console.error('❌ Error inicializando base de datos:', error);
+    }
 }
 
 // Inicializar al arrancar
@@ -125,39 +127,30 @@ app.post('/api/register', async (req, res) => {
     const { nombre_veterinario, email, password, telefono, direccion } = req.body;
 
     try {
-        // Verificar si el email ya existe
-        db.get('SELECT id FROM veterinarios WHERE email = ?', [email], async (err, existingUser) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error en la base de datos' });
+        const existingUser = await pool.query('SELECT id FROM veterinarios WHERE email = $1', [email]);
+        
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({ error: 'El email ya está registrado' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const result = await pool.query(`
+            INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5) RETURNING id, email, nombre_veterinario
+        `, [nombre_veterinario, email, hashedPassword, telefono, direccion]);
+
+        const newVet = result.rows[0];
+        const token = jwt.sign({ id: newVet.id, email: newVet.email }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({
+            message: 'Veterinario registrado exitosamente',
+            token,
+            user: {
+                id: newVet.id,
+                email: newVet.email,
+                nombre: newVet.nombre_veterinario
             }
-            
-            if (existingUser) {
-                return res.status(400).json({ error: 'El email ya está registrado' });
-            }
-
-            const hashedPassword = await bcrypt.hash(password, 10);
-            
-            db.run(`INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
-                    VALUES (?, ?, ?, ?, ?)`,
-                [nombre_veterinario, email, hashedPassword, telefono, direccion],
-                function(err) {
-                    if (err) {
-                        return res.status(500).json({ error: 'Error registrando veterinario' });
-                    }
-
-                    const token = jwt.sign({ id: this.lastID, email }, JWT_SECRET, { expiresIn: '24h' });
-
-                    res.json({
-                        message: 'Veterinario registrado exitosamente',
-                        token,
-                        user: {
-                            id: this.lastID,
-                            email,
-                            nombre: nombre_veterinario
-                        }
-                    });
-                }
-            );
         });
     } catch (error) {
         console.error('Error en registro:', error);
@@ -169,32 +162,29 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        db.get('SELECT * FROM veterinarios WHERE email = ?', [email], async (err, user) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error en la base de datos' });
+        const result = await pool.query('SELECT * FROM veterinarios WHERE email = $1', [email]);
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+
+        const user = result.rows[0];
+        const validPassword = await bcrypt.compare(password, user.password);
+
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({
+            message: 'Login exitoso',
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre_veterinario
             }
-            
-            if (!user) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
-            }
-
-            const validPassword = await bcrypt.compare(password, user.password);
-
-            if (!validPassword) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
-            }
-
-            const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
-
-            res.json({
-                message: 'Login exitoso',
-                token,
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    nombre: user.nombre_veterinario
-                }
-            });
         });
     } catch (error) {
         console.error('Error en login:', error);
@@ -203,92 +193,64 @@ app.post('/api/login', async (req, res) => {
 });
 
 // RUTAS DE CLIENTES
-app.post('/api/clientes', authenticateToken, (req, res) => {
+app.post('/api/clientes', authenticateToken, async (req, res) => {
     const { nombre, apellido, email, telefono, direccion } = req.body;
 
-    if (!nombre || !apellido) {
-        return res.status(400).json({ error: 'Nombre y apellido son obligatorios' });
+    try {
+        const result = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [req.user.id, nombre, apellido, email, telefono, direccion]);
+
+        res.status(201).json({ 
+            message: 'Cliente registrado exitosamente', 
+            cliente: result.rows[0] 
+        });
+    } catch (error) {
+        console.error('Error registrando cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    db.run(`INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-        [req.user.id, nombre, apellido, email, telefono, direccion],
-        function(err) {
-            if (err) {
-                console.error('Error registrando cliente:', err);
-                return res.status(500).json({ error: 'Error registrando cliente' });
-            }
-
-            res.status(201).json({ 
-                message: 'Cliente registrado exitosamente', 
-                id: this.lastID
-            });
-        }
-    );
 });
 
-app.get('/api/clientes', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM clientes WHERE veterinario_id = ? ORDER BY created_at DESC', 
-        [req.user.id], 
-        (err, rows) => {
-            if (err) {
-                console.error('Error obteniendo clientes:', err);
-                return res.status(500).json({ error: 'Error obteniendo clientes' });
-            }
-            res.json(rows);
-        }
-    );
+app.get('/api/clientes', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM clientes WHERE veterinario_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo clientes:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
-app.get('/api/clientes-con-mascotas', authenticateToken, (req, res) => {
-    db.all(`SELECT 
-                c.id, c.nombre, c.apellido, c.email, c.telefono, c.direccion, c.created_at,
-                m.id as mascota_id, m.nombre as mascota_nombre, m.especie, m.raza, m.edad, m.peso, m.color, m.sexo
-            FROM clientes c
-            LEFT JOIN mascotas m ON c.id = m.cliente_id
-            WHERE c.veterinario_id = ?
-            ORDER BY c.created_at DESC`, 
-        [req.user.id], 
-        (err, rows) => {
-            if (err) {
-                console.error('Error obteniendo clientes con mascotas:', err);
-                return res.status(500).json({ error: 'Error obteniendo clientes' });
-            }
+app.get('/api/clientes-con-mascotas', authenticateToken, async (req, res) => {
+    try {
+        const clientesResult = await pool.query(
+            'SELECT * FROM clientes WHERE veterinario_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        
+        const clientesConMascotas = [];
+        
+        for (const cliente of clientesResult.rows) {
+            const mascotasResult = await pool.query(
+                'SELECT * FROM mascotas WHERE cliente_id = $1 ORDER BY created_at DESC',
+                [cliente.id]
+            );
             
-            // Agrupar resultados por cliente
-            const clientesMap = new Map();
-            
-            rows.forEach(row => {
-                if (!clientesMap.has(row.id)) {
-                    clientesMap.set(row.id, {
-                        id: row.id,
-                        nombre: row.nombre,
-                        apellido: row.apellido,
-                        email: row.email,
-                        telefono: row.telefono,
-                        direccion: row.direccion,
-                        created_at: row.created_at,
-                        mascotas: []
-                    });
-                }
-                
-                if (row.mascota_id) {
-                    clientesMap.get(row.id).mascotas.push({
-                        id: row.mascota_id,
-                        nombre: row.mascota_nombre,
-                        especie: row.especie,
-                        raza: row.raza,
-                        edad: row.edad,
-                        peso: row.peso,
-                        color: row.color,
-                        sexo: row.sexo
-                    });
-                }
+            clientesConMascotas.push({
+                ...cliente,
+                mascotas: mascotasResult.rows
             });
-            
-            res.json(Array.from(clientesMap.values()));
         }
-    );
+        
+        res.json(clientesConMascotas);
+    } catch (error) {
+        console.error('Error obteniendo clientes con mascotas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
 // RUTAS DE MASCOTAS
@@ -433,38 +395,30 @@ app.get('/api/app-config', (req, res) => {
 // Login demo directo - Crear veterinario demo único por sesión
 app.post('/api/demo-login', async (req, res) => {
     try {
-        // Crear veterinario demo único con timestamp
         const timestamp = Date.now();
         const demoEmail = `demo-${timestamp}@mundopatas.com`;
         const hashedPassword = await bcrypt.hash('demo123', 10);
         
-        db.run(`INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
-                VALUES (?, ?, ?, ?, ?)`,
-            [`Dr. Demo ${timestamp}`, demoEmail, hashedPassword, '2617024193', 'Clínica MUNDO PATAS - Demo'],
-            function(err) {
-                if (err) {
-                    console.error('Error creando veterinario demo:', err);
-                    return res.status(500).json({ error: 'Error interno del servidor' });
-                }
+        const newUser = await pool.query(`
+            INSERT INTO veterinarios (nombre_veterinario, email, password, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5) RETURNING *
+        `, [`Dr. Demo ${timestamp}`, demoEmail, hashedPassword, '2617024193', 'Clínica MUNDO PATAS - Demo']);
 
-                const veterinarioId = this.lastID;
-                
-                // Crear datos demo para este veterinario
-                createDemoData(veterinarioId, () => {
-                    const token = jwt.sign({ id: veterinarioId, email: demoEmail }, JWT_SECRET, { expiresIn: '24h' });
+        const user = newUser.rows[0];
+        
+        await createDemoData(user.id);
+        
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
 
-                    res.json({
-                        message: 'Acceso demo exitoso - Datos precargados',
-                        token,
-                        user: {
-                            id: veterinarioId,
-                            email: demoEmail,
-                            nombre: `Dr. Demo ${timestamp}`
-                        }
-                    });
-                });
+        res.json({
+            message: 'Acceso demo exitoso - Datos precargados',
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre_veterinario
             }
-        );
+        });
     } catch (error) {
         console.error('Error en demo login:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -472,52 +426,32 @@ app.post('/api/demo-login', async (req, res) => {
 });
 
 // Función para crear datos demo por veterinario
-function createDemoData(veterinarioId, callback) {
-    // Crear clientes demo
-    db.run(`INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-        [veterinarioId, 'María', 'González', 'maria.gonzalez@email.com', '2617123456', 'Av. San Martín 123'],
-        function(err) {
-            if (err) {
-                console.error('Error creando cliente demo 1:', err);
-                return callback();
-            }
-            
-            const cliente1Id = this.lastID;
-            
-            db.run(`INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
-                    VALUES (?, ?, ?, ?, ?, ?)`,
-                [veterinarioId, 'Carlos', 'Rodríguez', 'carlos.rodriguez@email.com', '2617654321', 'Calle Belgrano 456'],
-                function(err) {
-                    if (err) {
-                        console.error('Error creando cliente demo 2:', err);
-                        return callback();
-                    }
-                    
-                    const cliente2Id = this.lastID;
-                    
-                    // Crear mascotas demo
-                    db.run(`INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                        [veterinarioId, cliente1Id, 'Max', 'Perro', 'Labrador', 3, 25.5, 'Dorado', 'Macho'],
-                        function(err) {
-                            if (err) console.error('Error creando mascota demo 1:', err);
-                            
-                            db.run(`INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                [veterinarioId, cliente2Id, 'Luna', 'Gato', 'Persa', 2, 4.2, 'Blanco', 'Hembra'],
-                                function(err) {
-                                    if (err) console.error('Error creando mascota demo 2:', err);
-                                    console.log(`✅ Datos demo creados para veterinario ${veterinarioId}`);
-                                    callback();
-                                }
-                            );
-                        }
-                    );
-                }
-            );
-        }
-    );
+async function createDemoData(veterinarioId) {
+    try {
+        const cliente1 = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [veterinarioId, 'María', 'González', 'maria.gonzalez@email.com', '2617123456', 'Av. San Martín 123']);
+        
+        const cliente2 = await pool.query(`
+            INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono, direccion) 
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [veterinarioId, 'Carlos', 'Rodríguez', 'carlos.rodriguez@email.com', '2617654321', 'Calle Belgrano 456']);
+        
+        await pool.query(`
+            INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [veterinarioId, cliente1.rows[0].id, 'Max', 'Perro', 'Labrador', 3, 25.5, 'Dorado', 'Macho']);
+        
+        await pool.query(`
+            INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie, raza, edad, peso, color, sexo) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [veterinarioId, cliente2.rows[0].id, 'Luna', 'Gato', 'Persa', 2, 4.2, 'Blanco', 'Hembra']);
+        
+        console.log(`✅ Datos demo creados para veterinario ${veterinarioId}`);
+    } catch (error) {
+        console.error('Error creando datos demo:', error);
+    }
 }
 
 // Endpoint para validar clave de acceso
