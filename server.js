@@ -6,7 +6,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
-const db = require('./database');
+const db = require('./database-postgres');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -2517,9 +2517,19 @@ function getPlanPrice(plan) {
 
 // ==================== FIN PANEL DE ADMINISTRACIÓN ====================
 
-// Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-    console.log(`Accede a: http://localhost:${PORT}`);
-    console.log(`Panel Admin: http://localhost:${PORT}/admin-panel.html`);
-});
+// Inicializar base de datos y iniciar servidor
+async function startServer() {
+    try {
+        await db.initializeDatabase();
+        app.listen(PORT, () => {
+            console.log(`Servidor corriendo en puerto ${PORT}`);
+            console.log(`Accede a: http://localhost:${PORT}`);
+            console.log(`Panel Admin: http://localhost:${PORT}/admin-panel.html`);
+        });
+    } catch (error) {
+        console.error('Error iniciando servidor:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
