@@ -5,10 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start-demo": "node server-demo.js",
     "dev": "nodemon server.js",
-    "build": "npm install",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm install"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
