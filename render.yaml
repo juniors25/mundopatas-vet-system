@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: mundo-patas
+    name: mundo-patas-veterinaria
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -15,9 +15,8 @@ services:
           name: mundo-patas-db
           property: connectionString
   
-  - type: pserv
-    name: mundo-patas-db
-    env: postgresql
-    plan: free
+databases:
+  - name: mundo-patas-db
     databaseName: mundopatas
-    databaseUser: mundopatas
+    user: mundopatas
+    plan: free

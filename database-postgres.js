@@ -3,13 +3,21 @@ const path = require('path');
 
 // Configuración de la base de datos
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/mundopatas',
+    connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Función para inicializar la base de datos
 async function initializeDatabase() {
     try {
+        // Verificar conexión a la base de datos
+        console.log('🔄 Conectando a la base de datos...');
+        console.log('DATABASE_URL presente:', !!process.env.DATABASE_URL);
+        
+        // Test de conexión
+        await pool.query('SELECT NOW()');
+        console.log('✅ Conexión a PostgreSQL establecida');
+        
         // Crear tablas si no existen
         await pool.query(`
             CREATE TABLE IF NOT EXISTS veterinarios (
