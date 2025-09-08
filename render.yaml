@@ -10,13 +10,3 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: mundopatas-db
-          property: connectionString
-
-databases:
-  - name: mundopatas-db
-    databaseName: mundopatas
-    user: mundopatas
-    plan: free
