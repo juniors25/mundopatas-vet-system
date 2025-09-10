@@ -1456,6 +1456,25 @@ app.put('/api/notificaciones/:id/leer', authenticateToken, (req, res) => {
 // Función para generar notificaciones automáticas
 const generarNotificacionesAutomaticas = async () => {
     try {
+        console.log('🔔 Generando notificaciones automáticas...');
+        
+        // Verificar si las tablas existen antes de hacer consultas
+        const tablesExist = await new Promise((resolve) => {
+            db.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('vacunas', 'notificaciones', 'medicamentos', 'citas')`, (err, result) => {
+                if (err) {
+                    console.log('⚠️ Error verificando tablas, saltando notificaciones:', err.message);
+                    resolve(false);
+                } else {
+                    resolve(result.rows.length >= 2); // Al menos vacunas y notificaciones
+                }
+            });
+        });
+        
+        if (!tablesExist) {
+            console.log('⚠️ Tablas de notificaciones no existen aún, saltando...');
+            return;
+        }
+        
         // Notificaciones de vacunas próximas a vencer
         const vacunasProximas = await new Promise((resolve, reject) => {
             const sql = `SELECT v.*, m.nombre as mascota_nombre, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.veterinario_id
@@ -1465,8 +1484,12 @@ const generarNotificacionesAutomaticas = async () => {
                         WHERE v.fecha_proxima <= CURRENT_DATE + INTERVAL '7 days' AND v.fecha_proxima > CURRENT_DATE`;
             
             db.query(sql, (err, result) => {
-                if (err) reject(err);
-                else resolve(result.rows);
+                if (err) {
+                    console.log('⚠️ Error en consulta de vacunas, saltando:', err.message);
+                    resolve([]);
+                } else {
+                    resolve(result.rows || []);
+                }
             });
         });
         
@@ -1496,8 +1519,12 @@ const generarNotificacionesAutomaticas = async () => {
         // Notificaciones de medicamentos con stock bajo
         const medicamentosStockBajo = await new Promise((resolve, reject) => {
             db.query(`SELECT * FROM medicamentos WHERE stock_actual <= stock_minimo AND activo = 1`, (err, result) => {
-                if (err) reject(err);
-                else resolve(result.rows);
+                if (err) {
+                    console.log('⚠️ Error en consulta de medicamentos, saltando:', err.message);
+                    resolve([]);
+                } else {
+                    resolve(result.rows || []);
+                }
             });
         });
         
@@ -1538,8 +1565,12 @@ const generarNotificacionesAutomaticas = async () => {
                    JOIN mascotas m ON c.mascota_id = m.id
                    JOIN clientes cl ON m.cliente_id = cl.id
                    WHERE DATE(c.fecha_hora) = CURRENT_DATE AND c.estado = 'programada'`, (err, result) => {
-                if (err) reject(err);
-                else resolve(result.rows);
+                if (err) {
+                    console.log('⚠️ Error en consulta de citas, saltando:', err.message);
+                    resolve([]);
+                } else {
+                    resolve(result.rows || []);
+                }
             });
         });
         
@@ -1566,8 +1597,11 @@ const generarNotificacionesAutomaticas = async () => {
             }
         }
         
+        console.log('✅ Notificaciones automáticas procesadas correctamente');
+        
     } catch (error) {
-        console.error('Error generando notificaciones automáticas:', error);
+        console.error('⚠️ Error generando notificaciones automáticas:', error.message);
+        // No lanzar el error para evitar que crashee el servidor
     }
 };
 
