@@ -367,21 +367,22 @@ app.post('/api/auth/register', async (req, res) => {
     
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const sql = `INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES (?, ?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`;
         
-        db.run(sql, [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion], function(err) {
+        db.query(sql, [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion], (err, result) => {
             if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
+                if (err.message.includes('duplicate key') || err.message.includes('unique constraint')) {
                     return res.status(400).json({ error: 'El email ya está registrado' });
                 }
                 return res.status(500).json({ error: err.message });
             }
             
-            const token = jwt.sign({ id: this.lastID, email, rol: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
+            const newId = result.rows[0].id;
+            const token = jwt.sign({ id: newId, email, rol: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
             res.json({ 
                 token, 
                 user: { 
-                    id: this.lastID, 
+                    id: newId, 
                     nombre_veterinaria, 
                     nombre_veterinario, 
                     email, 
@@ -398,13 +399,14 @@ app.post('/api/auth/register', async (req, res) => {
 // Login
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    const sql = `SELECT * FROM veterinarios WHERE email = ? AND activo = 1`;
+    const sql = `SELECT * FROM veterinarios WHERE email = $1 AND activo = 1`;
     
-    db.get(sql, [email], async (err, user) => {
+    db.query(sql, [email], async (err, result) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
         
+        const user = result.rows[0];
         if (!user) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
