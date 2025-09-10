@@ -1462,11 +1462,11 @@ const generarNotificacionesAutomaticas = async () => {
                         FROM vacunas v
                         JOIN mascotas m ON v.mascota_id = m.id
                         JOIN clientes c ON m.cliente_id = c.id
-                        WHERE v.fecha_proxima <= date('now', '+7 days') AND v.fecha_proxima > date('now')`;
+                        WHERE v.fecha_proxima <= CURRENT_DATE + INTERVAL '7 days' AND v.fecha_proxima > CURRENT_DATE`;
             
-            db.all(sql, [], (err, rows) => {
+            db.query(sql, (err, result) => {
                 if (err) reject(err);
-                else resolve(rows);
+                else resolve(result.rows);
             });
         });
         
@@ -1476,17 +1476,17 @@ const generarNotificacionesAutomaticas = async () => {
             
             // Verificar si ya existe esta notificación
             const existeNotif = await new Promise((resolve, reject) => {
-                db.get(`SELECT id FROM notificaciones WHERE tipo = 'vacuna_vencimiento' AND datos_adicionales LIKE ? AND fecha_envio > date('now', '-1 day')`, 
-                       [`%"vacuna_id":${vacuna.id}%`], (err, row) => {
+                db.query(`SELECT id FROM notificaciones WHERE tipo = 'vacuna_vencimiento' AND datos_adicionales LIKE $1 AND fecha_envio > CURRENT_DATE - INTERVAL '1 day'`, 
+                       [`%"vacuna_id":${vacuna.id}%`], (err, result) => {
                     if (err) reject(err);
-                    else resolve(row);
+                    else resolve(result.rows[0]);
                 });
             });
             
             if (!existeNotif) {
                 const datos = { vacuna_id: vacuna.id, mascota_id: vacuna.mascota_id, fecha_vencimiento: vacuna.fecha_proxima };
                 
-                db.run(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES (?, 'vacuna_vencimiento', ?, ?, ?)`,
+                db.query(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES ($1, 'vacuna_vencimiento', $2, $3, $4)`,
                        [vacuna.veterinario_id, titulo, mensaje, JSON.stringify(datos)], (err) => {
                     if (err) console.error('Error creando notificación de vacuna:', err);
                 });
@@ -1495,9 +1495,9 @@ const generarNotificacionesAutomaticas = async () => {
         
         // Notificaciones de medicamentos con stock bajo
         const medicamentosStockBajo = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM medicamentos WHERE stock_actual <= stock_minimo AND activo = 1`, [], (err, rows) => {
+            db.query(`SELECT * FROM medicamentos WHERE stock_actual <= stock_minimo AND activo = 1`, (err, result) => {
                 if (err) reject(err);
-                else resolve(rows);
+                else resolve(result.rows);
             });
         });
         
@@ -1507,10 +1507,10 @@ const generarNotificacionesAutomaticas = async () => {
             
             // Verificar si ya existe esta notificación reciente
             const existeNotif = await new Promise((resolve, reject) => {
-                db.get(`SELECT id FROM notificaciones WHERE tipo = 'stock_bajo' AND datos_adicionales LIKE ? AND fecha_envio > date('now', '-3 days')`, 
-                       [`%"medicamento_id":${medicamento.id}%`], (err, row) => {
+                db.query(`SELECT id FROM notificaciones WHERE tipo = 'stock_bajo' AND datos_adicionales LIKE $1 AND fecha_envio > CURRENT_DATE - INTERVAL '3 days'`, 
+                       [`%"medicamento_id":${medicamento.id}%`], (err, result) => {
                     if (err) reject(err);
-                    else resolve(row);
+                    else resolve(result.rows[0]);
                 });
             });
             
@@ -1518,10 +1518,10 @@ const generarNotificacionesAutomaticas = async () => {
                 const datos = { medicamento_id: medicamento.id, stock_actual: medicamento.stock_actual, stock_minimo: medicamento.stock_minimo };
                 
                 // Enviar a todos los veterinarios activos
-                db.all(`SELECT id FROM veterinarios WHERE activo = 1`, [], (err, veterinarios) => {
+                db.query(`SELECT id FROM veterinarios WHERE activo = 1`, (err, result) => {
                     if (!err) {
-                        veterinarios.forEach(vet => {
-                            db.run(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES (?, 'stock_bajo', ?, ?, ?)`,
+                        result.rows.forEach(vet => {
+                            db.query(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES ($1, 'stock_bajo', $2, $3, $4)`,
                                    [vet.id, titulo, mensaje, JSON.stringify(datos)], (err) => {
                                 if (err) console.error('Error creando notificación de stock:', err);
                             });
@@ -1533,15 +1533,13 @@ const generarNotificacionesAutomaticas = async () => {
         
         // Notificaciones de citas del día
         const citasHoy = await new Promise((resolve, reject) => {
-            const sql = `SELECT c.*, m.nombre as mascota_nombre, cl.nombre as cliente_nombre, cl.apellido as cliente_apellido
-                        FROM citas c
-                        JOIN mascotas m ON c.mascota_id = m.id
-                        JOIN clientes cl ON m.cliente_id = cl.id
-                        WHERE date(c.fecha_cita) = date('now') AND c.estado = 'programada'`;
-            
-            db.all(sql, [], (err, rows) => {
+            db.query(`SELECT c.*, m.nombre as mascota_nombre, cl.nombre as cliente_nombre, cl.apellido as cliente_apellido, cl.veterinario_id
+                   FROM citas c
+                   JOIN mascotas m ON c.mascota_id = m.id
+                   JOIN clientes cl ON m.cliente_id = cl.id
+                   WHERE DATE(c.fecha_hora) = CURRENT_DATE AND c.estado = 'programada'`, (err, result) => {
                 if (err) reject(err);
-                else resolve(rows);
+                else resolve(result.rows);
             });
         });
         
@@ -1551,17 +1549,17 @@ const generarNotificacionesAutomaticas = async () => {
             
             // Verificar si ya existe esta notificación
             const existeNotif = await new Promise((resolve, reject) => {
-                db.get(`SELECT id FROM notificaciones WHERE tipo = 'cita_hoy' AND datos_adicionales LIKE ? AND fecha_envio > date('now')`, 
-                       [`%"cita_id":${cita.id}%`], (err, row) => {
+                db.query(`SELECT id FROM notificaciones WHERE tipo = 'cita_hoy' AND datos_adicionales LIKE $1 AND fecha_envio > CURRENT_DATE`, 
+                       [`%"cita_id":${cita.id}%`], (err, result) => {
                     if (err) reject(err);
-                    else resolve(row);
+                    else resolve(result.rows[0]);
                 });
             });
             
             if (!existeNotif) {
-                const datos = { cita_id: cita.id, mascota_id: cita.mascota_id, hora: cita.hora_inicio };
+                const datos = { cita_id: cita.id, mascota_id: cita.mascota_id, fecha_hora: cita.fecha_hora };
                 
-                db.run(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES (?, 'cita_hoy', ?, ?, ?)`,
+                db.query(`INSERT INTO notificaciones (destinatario_id, tipo, titulo, mensaje, datos_adicionales) VALUES ($1, 'cita_hoy', $2, $3, $4)`,
                        [cita.veterinario_id, titulo, mensaje, JSON.stringify(datos)], (err) => {
                     if (err) console.error('Error creando notificación de cita:', err);
                 });
