@@ -1605,11 +1605,11 @@ const generarNotificacionesAutomaticas = async () => {
     }
 };
 
-// Ejecutar notificaciones automáticas cada hora
-setInterval(generarNotificacionesAutomaticas, 60 * 60 * 1000);
+// TEMPORALMENTE DESHABILITADO PARA DEPLOYMENT
+// setInterval(generarNotificacionesAutomaticas, 5 * 60 * 1000);
 
-// Ejecutar al iniciar el servidor
-setTimeout(generarNotificacionesAutomaticas, 5000);
+// TEMPORALMENTE DESHABILITADO PARA DEPLOYMENT
+// setTimeout(generarNotificacionesAutomaticas, 5000);
 
 // ==================== REPORTES Y ESTADÍSTICAS ====================
 
