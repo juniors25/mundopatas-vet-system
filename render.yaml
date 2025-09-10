@@ -3,8 +3,8 @@ services:
     name: mundopatas-veterinaria
     env: node
     plan: free
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: npm install --production=false
+    startCommand: node server-postgres.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,3 +14,9 @@ services:
         fromDatabase:
           name: mundopatas-db
           property: connectionString
+
+databases:
+  - name: mundopatas-db
+    databaseName: mundopatas
+    user: mundopatas_user
+    plan: free
