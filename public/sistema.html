@@ -398,54 +398,237 @@
         <!-- Consultas Section -->
         <div id="consultas-section" class="content-section" style="display: none;">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5><i class="fas fa-stethoscope me-2"></i>Nueva Consulta</h5>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleConsultaForm()">
+                                <i class="fas fa-list me-1"></i>Ver Historial
+                            </button>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="consulta-form-container">
                             <form id="consulta-form">
-                                <div class="mb-3">
-                                    <label class="form-label">Mascota</label>
+                                <!-- Selección de Mascota -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Mascota</label>
                                     <select class="form-select" name="mascota_id" required>
                                         <option value="">Seleccionar mascota...</option>
                                     </select>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Motivo de Consulta</label>
-                                    <textarea class="form-control" name="motivo" rows="3" required></textarea>
+
+                                <!-- Motivo de Consulta -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Motivo de Consulta</label>
+                                    <textarea class="form-control" name="motivo" rows="2" required placeholder="Describe el motivo de la consulta..."></textarea>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Diagnóstico</label>
-                                    <textarea class="form-control" name="diagnostico" rows="3"></textarea>
+
+                                <hr class="my-4">
+
+                                <!-- SEMIOLOGÍA Y EXAMEN FÍSICO -->
+                                <h6 class="text-primary mb-3"><i class="fas fa-heartbeat me-2"></i>Semiología y Examen Físico</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Estado Corporal</label>
+                                        <select class="form-select" name="estado_corporal">
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Caquéctico">Caquéctico (1/5)</option>
+                                            <option value="Delgado">Delgado (2/5)</option>
+                                            <option value="Ideal">Ideal (3/5)</option>
+                                            <option value="Sobrepeso">Sobrepeso (4/5)</option>
+                                            <option value="Obeso">Obeso (5/5)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Manto Piloso</label>
+                                        <input type="text" class="form-control" name="manto_piloso" placeholder="Ej: Brillante, opaco, con alopecia...">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Tiempo Llenado Capilar</label>
+                                        <input type="text" class="form-control" name="tiempo_llenado_capilar" placeholder="Ej: <2 seg, normal">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Frecuencia Cardíaca</label>
+                                        <input type="text" class="form-control" name="frecuencia_cardiaca" placeholder="Ej: 120 lpm">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Frecuencia Respiratoria</label>
+                                        <input type="text" class="form-control" name="frecuencia_respiratoria" placeholder="Ej: 30 rpm">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Peso (kg)</label>
+                                        <input type="number" class="form-control" name="peso" step="0.1" placeholder="0.0">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Temperatura (°C)</label>
+                                        <input type="number" class="form-control" name="temperatura" step="0.1" placeholder="38.5">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Ganglios Linfáticos</label>
+                                        <input type="text" class="form-control" name="ganglios_linfaticos" placeholder="Ej: Normales, aumentados...">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Tonalidad de Mucosa</label>
+                                        <select class="form-select" name="tonalidad_mucosa">
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Rosada">Rosada (Normal)</option>
+                                            <option value="Pálida">Pálida</option>
+                                            <option value="Cianótica">Cianótica</option>
+                                            <option value="Ictérica">Ictérica</option>
+                                            <option value="Congestiva">Congestiva</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Examen Bucal</label>
+                                        <input type="text" class="form-control" name="examen_bucal" placeholder="Ej: Sarro, gingivitis...">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Examen Ocular</label>
+                                        <input type="text" class="form-control" name="examen_ocular" placeholder="Ej: Normal, secreción...">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Examen Ótico</label>
+                                        <input type="text" class="form-control" name="examen_otico" placeholder="Ej: Limpio, cerumen...">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Examen Neurológico</label>
+                                        <input type="text" class="form-control" name="examen_neurologico" placeholder="Ej: Reflejos normales...">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Examen Aparato Locomotor</label>
+                                        <input type="text" class="form-control" name="examen_aparato_locomotor" placeholder="Ej: Marcha normal, cojera...">
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Tratamiento</label>
-                                    <textarea class="form-control" name="tratamiento" rows="3"></textarea>
+
+                                <hr class="my-4">
+
+                                <!-- ESTUDIOS COMPLEMENTARIOS -->
+                                <h6 class="text-success mb-3"><i class="fas fa-flask me-2"></i>Estudios Complementarios</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Tipo de Análisis</label>
+                                        <select class="form-select" name="tipo_analisis">
+                                            <option value="">Ninguno</option>
+                                            <option value="Hemograma">Hemograma</option>
+                                            <option value="Bioquímica">Bioquímica</option>
+                                            <option value="Orina">Análisis de Orina</option>
+                                            <option value="Heces">Análisis de Heces</option>
+                                            <option value="Radiografía">Radiografía</option>
+                                            <option value="Ecografía">Ecografía</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Fecha de Análisis</label>
+                                        <input type="date" class="form-control" name="fecha_analisis">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Resultados de Análisis</label>
+                                        <textarea class="form-control" name="resultados_analisis" rows="2" placeholder="Describe los resultados..."></textarea>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">URL Archivo Análisis</label>
+                                        <input type="text" class="form-control" name="archivo_analisis_url" placeholder="https://...">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Electrocardiograma</label>
+                                        <input type="text" class="form-control" name="electrocardiograma" placeholder="Ej: Ritmo sinusal normal">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Presión Arterial</label>
+                                        <input type="text" class="form-control" name="medicion_presion_arterial" placeholder="Ej: 120/80 mmHg">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Ecocardiograma</label>
+                                        <input type="text" class="form-control" name="ecocardiograma" placeholder="Ej: Sin alteraciones">
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Peso Actual (kg)</label>
-                                    <input type="number" class="form-control" name="peso_actual" step="0.1">
+
+                                <hr class="my-4">
+
+                                <!-- DESPARASITACIÓN -->
+                                <h6 class="text-warning mb-3"><i class="fas fa-pills me-2"></i>Desparasitación</h6>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Desparasitación</label>
+                                        <select class="form-select" name="desparasitacion">
+                                            <option value="">No aplicada</option>
+                                            <option value="Interna">Interna</option>
+                                            <option value="Externa">Externa</option>
+                                            <option value="Ambas">Interna y Externa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Fecha Desparasitación</label>
+                                        <input type="date" class="form-control" name="fecha_desparasitacion">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Producto Utilizado</label>
+                                        <input type="text" class="form-control" name="producto_desparasitacion" placeholder="Ej: Drontal Plus">
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Temperatura (°C)</label>
-                                    <input type="number" class="form-control" name="temperatura" step="0.1">
+
+                                <hr class="my-4">
+
+                                <!-- DIAGNÓSTICO -->
+                                <h6 class="text-danger mb-3"><i class="fas fa-diagnoses me-2"></i>Diagnóstico</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Diagnóstico Presuntivo</label>
+                                        <textarea class="form-control" name="diagnostico_presuntivo" rows="2" placeholder="Diagnóstico inicial o sospecha..."></textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Diagnóstico Final</label>
+                                        <textarea class="form-control" name="diagnostico_final" rows="2" placeholder="Diagnóstico confirmado..."></textarea>
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Observaciones</label>
-                                    <textarea class="form-control" name="observaciones" rows="3"></textarea>
+
+                                <hr class="my-4">
+
+                                <!-- TRATAMIENTO -->
+                                <h6 class="text-info mb-3"><i class="fas fa-prescription-bottle-alt me-2"></i>Tratamiento</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Medicamento</label>
+                                        <input type="text" class="form-control" name="medicamento" placeholder="Ej: Amoxicilina">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Dosis</label>
+                                        <input type="text" class="form-control" name="dosis" placeholder="Ej: 10 mg/kg">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Intervalo</label>
+                                        <input type="text" class="form-control" name="intervalo" placeholder="Ej: Cada 12 hs">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Tratamiento Inyectable</label>
+                                        <textarea class="form-control" name="tratamiento_inyectable" rows="2" placeholder="Describe tratamiento inyectable si aplica..."></textarea>
+                                    </div>
                                 </div>
-                                <button type="submit" class="btn btn-info">
-                                    <i class="fas fa-save me-1"></i>Registrar Consulta
-                                </button>
+
+                                <hr class="my-4">
+
+                                <!-- OBSERVACIONES -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Observaciones Generales</label>
+                                    <textarea class="form-control" name="observaciones" rows="3" placeholder="Notas adicionales, recomendaciones, próxima visita..."></textarea>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-save me-2"></i>Registrar Consulta Completa
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
+
+                    <!-- Historial de Consultas -->
+                    <div class="card mt-4" id="consultas-historial-card" style="display: none;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5><i class="fas fa-history me-2"></i>Historial de Consultas</h5>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="toggleConsultaForm()">
+                                <i class="fas fa-plus me-1"></i>Nueva Consulta
+                            </button>
                         </div>
                         <div class="card-body">
                             <div id="consultas-historial">

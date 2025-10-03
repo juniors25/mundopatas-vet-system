@@ -1087,3 +1087,17 @@ function calcularAlimento() {
         document.getElementById('dias-restantes-info').textContent = '';
     }
 }
+
+// Alternar entre formulario de consulta e historial
+function toggleConsultaForm() {
+    const formContainer = document.getElementById('consulta-form-container');
+    const historialCard = document.getElementById('consultas-historial-card');
+    
+    if (formContainer.parentElement.style.display === 'none') {
+        formContainer.parentElement.style.display = 'block';
+        historialCard.style.display = 'none';
+    } else {
+        formContainer.parentElement.style.display = 'none';
+        historialCard.style.display = 'block';
+    }
+}
