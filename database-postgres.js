@@ -42,8 +42,22 @@ async function initializeDatabase() {
                 email TEXT,
                 telefono TEXT,
                 direccion TEXT,
+                password_portal TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Agregar columna password_portal si no existe (para bases de datos existentes)
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='clientes' AND column_name='password_portal'
+                ) THEN
+                    ALTER TABLE clientes ADD COLUMN password_portal TEXT;
+                END IF;
+            END $$;
         `);
 
         await pool.query(`
@@ -56,13 +70,102 @@ async function initializeDatabase() {
                 raza TEXT,
                 edad INTEGER,
                 peso DECIMAL(5,2),
-                color TEXT,
+                pelaje TEXT,
                 sexo TEXT,
                 observaciones TEXT,
+                tiene_chip BOOLEAN DEFAULT false,
+                numero_chip TEXT,
+                tipo_alimento TEXT,
+                marca_alimento TEXT,
+                peso_bolsa_kg DECIMAL(5,2),
+                fecha_inicio_bolsa DATE,
+                gramos_diarios DECIMAL(6,2),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        
+        // Migración: Agregar nuevos campos si no existen
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                -- Renombrar color a pelaje si existe
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='color'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='pelaje'
+                ) THEN
+                    ALTER TABLE mascotas RENAME COLUMN color TO pelaje;
+                END IF;
+                
+                -- Agregar pelaje si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='pelaje'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN pelaje TEXT;
+                END IF;
+                
+                -- Agregar tiene_chip si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='tiene_chip'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN tiene_chip BOOLEAN DEFAULT false;
+                END IF;
+                
+                -- Agregar numero_chip si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='numero_chip'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN numero_chip TEXT;
+                END IF;
+                
+                -- Agregar tipo_alimento si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='tipo_alimento'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN tipo_alimento TEXT;
+                END IF;
+                
+                -- Agregar marca_alimento si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='marca_alimento'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN marca_alimento TEXT;
+                END IF;
+                
+                -- Agregar peso_bolsa_kg si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='peso_bolsa_kg'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN peso_bolsa_kg DECIMAL(5,2);
+                END IF;
+                
+                -- Agregar fecha_inicio_bolsa si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='fecha_inicio_bolsa'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN fecha_inicio_bolsa DATE;
+                END IF;
+                
+                -- Agregar gramos_diarios si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='gramos_diarios'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN gramos_diarios DECIMAL(6,2);
+                END IF;
+            END $$;
+        `);
 
+        // Crear tabla consultas con estructura base
         await pool.query(`
             CREATE TABLE IF NOT EXISTS consultas (
                 id SERIAL PRIMARY KEY,
@@ -71,14 +174,12 @@ async function initializeDatabase() {
                 mascota_id INTEGER REFERENCES mascotas(id),
                 fecha_consulta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 motivo TEXT NOT NULL,
-                diagnostico TEXT,
-                tratamiento TEXT,
                 observaciones TEXT,
-                peso_actual DECIMAL(5,2),
-                temperatura DECIMAL(4,1),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        
+        // Migrar campos adicionales si no existen (ejecutar migrate-consultas.js para agregar todos los campos)
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS analisis (
@@ -243,6 +344,55 @@ async function initializeDatabase() {
                 mensaje TEXT NOT NULL,
                 archivo_adjunto TEXT,
                 fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla para configuración de notificaciones
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notificaciones_config (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id) UNIQUE,
+                email_habilitado BOOLEAN DEFAULT true,
+                whatsapp_habilitado BOOLEAN DEFAULT false,
+                telegram_habilitado BOOLEAN DEFAULT false,
+                dias_aviso_alimento INTEGER DEFAULT 7,
+                email_notificaciones TEXT,
+                telefono_whatsapp TEXT,
+                telegram_chat_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla para historial de notificaciones enviadas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notificaciones_enviadas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                tipo_notificacion TEXT NOT NULL,
+                canal TEXT NOT NULL,
+                destinatario TEXT NOT NULL,
+                asunto TEXT,
+                mensaje TEXT NOT NULL,
+                estado TEXT DEFAULT 'pendiente',
+                error_mensaje TEXT,
+                fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_procesado TIMESTAMP
+            )
+        `);
+
+        // Tabla para alertas de alimento
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS alertas_alimento (
+                id SERIAL PRIMARY KEY,
+                mascota_id INTEGER REFERENCES mascotas(id),
+                dias_restantes INTEGER,
+                porcentaje_restante INTEGER,
+                fecha_alerta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                notificacion_enviada BOOLEAN DEFAULT false,
+                fecha_notificacion TIMESTAMP
             )
         `);
 

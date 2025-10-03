@@ -152,10 +152,19 @@ async function handleClienteSubmit(e) {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData);
     
+    const clienteId = data.cliente_id;
+    const isEditing = clienteId && clienteId !== '';
+    
+    // Remover cliente_id del objeto data ya que no es parte del body
+    delete data.cliente_id;
+    
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/clientes', {
-            method: 'POST',
+        const url = isEditing ? `/api/clientes/${clienteId}` : '/api/clientes';
+        const method = isEditing ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -166,8 +175,9 @@ async function handleClienteSubmit(e) {
         const result = await response.json();
         
         if (response.ok) {
-            showMessage('Cliente registrado exitosamente', 'success');
+            showMessage(isEditing ? 'Cliente actualizado exitosamente' : 'Cliente registrado exitosamente', 'success');
             e.target.reset();
+            cancelarEdicionCliente();
             loadClientes();
             loadDashboardData();
         } else {
@@ -176,6 +186,41 @@ async function handleClienteSubmit(e) {
     } catch (error) {
         showMessage('Error de conexión', 'error');
     }
+}
+
+// Función para editar cliente
+function editarCliente(clienteId) {
+    const cliente = clientes.find(c => c.id === clienteId);
+    if (!cliente) {
+        showMessage('Cliente no encontrado', 'error');
+        return;
+    }
+    
+    // Llenar el formulario con los datos del cliente
+    document.getElementById('cliente_id').value = cliente.id;
+    document.querySelector('#cliente-form input[name="nombre"]').value = cliente.nombre;
+    document.querySelector('#cliente-form input[name="apellido"]').value = cliente.apellido;
+    document.querySelector('#cliente-form input[name="email"]').value = cliente.email || '';
+    document.querySelector('#cliente-form input[name="telefono"]').value = cliente.telefono || '';
+    document.querySelector('#cliente-form input[name="direccion"]').value = cliente.direccion || '';
+    document.querySelector('#cliente-form input[name="password_portal"]').value = cliente.password_portal || '';
+    
+    // Cambiar el título y botón del formulario
+    document.getElementById('cliente-form-title').innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Cliente';
+    document.getElementById('cliente-submit-btn').innerHTML = '<i class="fas fa-save me-1"></i>Actualizar Cliente';
+    document.getElementById('cliente-cancel-btn').style.display = 'inline-block';
+    
+    // Scroll al formulario
+    document.querySelector('#clientes-section .card').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Función para cancelar edición de cliente
+function cancelarEdicionCliente() {
+    document.getElementById('cliente-form').reset();
+    document.getElementById('cliente_id').value = '';
+    document.getElementById('cliente-form-title').innerHTML = '<i class="fas fa-user-plus me-2"></i>Registrar Cliente';
+    document.getElementById('cliente-submit-btn').innerHTML = '<i class="fas fa-save me-1"></i>Registrar Cliente';
+    document.getElementById('cliente-cancel-btn').style.display = 'none';
 }
 
 // Manejar envío de formulario de mascota
@@ -331,6 +376,7 @@ async function loadClientes() {
         clientesConMascotas.forEach(cliente => {
             const row = document.createElement('tr');
             const numMascotas = cliente.mascotas ? cliente.mascotas.length : 0;
+            const passwordPortal = cliente.password_portal || '-';
             row.innerHTML = `
                 <td>
                     <strong>${cliente.nombre} ${cliente.apellido}</strong>
@@ -339,11 +385,20 @@ async function loadClientes() {
                 <td>${cliente.telefono || '-'}</td>
                 <td>${cliente.email || '-'}</td>
                 <td>
+                    <span class="badge bg-info">${passwordPortal}</span>
+                </td>
+                <td>
                     ${new Date(cliente.fecha_registro).toLocaleDateString()}
-                    <br>
-                    <button class="btn btn-sm btn-outline-primary mt-1" onclick="verMascotasCliente(${cliente.id})">
-                        <i class="fas fa-paw"></i> Ver Mascotas
-                    </button>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" onclick="editarCliente(${cliente.id})" title="Editar cliente">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-info" onclick="verMascotasCliente(${cliente.id})" title="Ver mascotas">
+                            <i class="fas fa-paw"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(row);
@@ -912,4 +967,123 @@ function showMessage(message, type) {
             messageDiv.remove();
         }
     }, 5000);
+}
+
+// ==================== FUNCIONES PARA MASCOTAS ====================
+
+// Actualizar razas según especie seleccionada
+function actualizarRazas() {
+    const especieSelect = document.getElementById('especie-select');
+    const razaSelect = document.getElementById('raza-select');
+    const especie = especieSelect.value;
+    
+    // Limpiar opciones actuales
+    razaSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    
+    if (especie === 'Canino' && typeof RAZAS_CANINAS !== 'undefined') {
+        RAZAS_CANINAS.forEach(raza => {
+            const option = document.createElement('option');
+            option.value = raza;
+            option.textContent = raza;
+            razaSelect.appendChild(option);
+        });
+    } else if (especie === 'Felino' && typeof RAZAS_FELINAS !== 'undefined') {
+        RAZAS_FELINAS.forEach(raza => {
+            const option = document.createElement('option');
+            option.value = raza;
+            option.textContent = raza;
+            razaSelect.appendChild(option);
+        });
+    } else {
+        // Para otras especies, permitir entrada manual
+        razaSelect.innerHTML = '<option value="">Otra (especificar en observaciones)</option>';
+    }
+}
+
+// Toggle mostrar/ocultar número de chip
+function toggleChipNumber() {
+    const tieneChip = document.getElementById('tiene-chip-select').value;
+    const numeroChipDiv = document.getElementById('numero-chip-div');
+    
+    if (tieneChip === 'true') {
+        numeroChipDiv.style.display = 'block';
+    } else {
+        numeroChipDiv.style.display = 'none';
+        document.querySelector('input[name="numero_chip"]').value = '';
+    }
+}
+
+// Calcular alimento diario recomendado
+function calcularAlimento() {
+    const peso = parseFloat(document.getElementById('peso-input').value);
+    const edad = parseFloat(document.getElementById('edad-input').value);
+    const especie = document.getElementById('especie-select').value;
+    const pesoBolsa = parseFloat(document.getElementById('peso-bolsa-input').value);
+    const fechaBolsa = document.getElementById('fecha-bolsa-input').value;
+    
+    if (!peso || peso <= 0 || !edad || !especie) {
+        document.getElementById('gramos-diarios-input').value = '';
+        document.getElementById('dias-restantes-info').textContent = '';
+        return;
+    }
+    
+    // Calcular gramos diarios usando la función del archivo razas-data.js
+    let gramosDiarios = 0;
+    if (typeof calcularAlimentoDiario !== 'undefined') {
+        gramosDiarios = calcularAlimentoDiario(peso, edad, especie);
+    } else {
+        // Cálculo básico si no está disponible la función
+        let porcentaje = 2.5;
+        if (edad <= 1) porcentaje = 3.5;
+        else if (edad > 7) porcentaje = 2;
+        gramosDiarios = Math.round((peso * 1000 * porcentaje) / 100);
+    }
+    
+    document.getElementById('gramos-diarios-input').value = gramosDiarios;
+    
+    // Calcular días restantes si hay datos de bolsa
+    if (pesoBolsa && pesoBolsa > 0 && gramosDiarios > 0) {
+        const infoElement = document.getElementById('dias-restantes-info');
+        
+        if (typeof calcularDiasRestantes !== 'undefined') {
+            const resultado = calcularDiasRestantes(pesoBolsa, gramosDiarios, fechaBolsa);
+            
+            if (resultado) {
+                if (fechaBolsa) {
+                    let colorClass = 'text-success';
+                    let icon = '✓';
+                    
+                    if (resultado.diasRestantes <= 3) {
+                        colorClass = 'text-danger';
+                        icon = '⚠️';
+                    } else if (resultado.diasRestantes <= 7) {
+                        colorClass = 'text-warning';
+                        icon = '⚠';
+                    }
+                    
+                    infoElement.innerHTML = `
+                        <span class="${colorClass}">
+                            ${icon} Quedan aproximadamente <strong>${resultado.diasRestantes} días</strong> de alimento 
+                            (${resultado.porcentajeRestante}% de la bolsa)
+                        </span>
+                    `;
+                } else {
+                    infoElement.innerHTML = `
+                        <span class="text-info">
+                            ℹ️ Esta bolsa durará aproximadamente <strong>${resultado.diasTotales} días</strong>
+                        </span>
+                    `;
+                }
+            }
+        } else {
+            const diasTotales = Math.floor((pesoBolsa * 1000) / gramosDiarios);
+            infoElement.innerHTML = `
+                <span class="text-info">
+                    ℹ️ Esta bolsa durará aproximadamente <strong>${diasTotales} días</strong>
+                </span>
+            `;
+        }
+    } else {
+        document.getElementById('dias-restantes-info').textContent = '';
+    }
 }

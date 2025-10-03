@@ -327,7 +327,7 @@ app.post('/api/clientes', authenticateToken, checkDemoLimits('clients'), async (
     console.log('📝 Solicitud de registro de cliente recibida:', req.body);
     
     try {
-        const { nombre, apellido, email, telefono, direccion } = req.body;
+        const { nombre, apellido, email, telefono, direccion, password_portal } = req.body;
         
         if (!nombre || !apellido) {
             console.log('❌ Campos obligatorios faltantes');
@@ -338,25 +338,77 @@ app.post('/api/clientes', authenticateToken, checkDemoLimits('clients'), async (
         
         console.log('💾 Insertando cliente en base de datos...');
         // Insertar nuevo cliente
-        db.run(`INSERT INTO clientes (nombre, apellido, email, telefono, direccion, veterinario_id) 
-                VALUES (?, ?, ?, ?, ?, ?)`,
-            [nombre, apellido, email, telefono, direccion, veterinario_id],
-            function(err) {
-                if (err) {
-                    console.log('❌ Error al insertar cliente:', err);
-                    return res.status(500).json({ error: 'Error al registrar cliente: ' + err.message });
-                }
-                
-                console.log('✅ Cliente registrado con ID:', this.lastID);
-                
-                res.json({
-                    id: this.lastID,
-                    message: 'Cliente registrado exitosamente'
-                });
+        const sql = `INSERT INTO clientes (nombre, apellido, email, telefono, direccion, password_portal, veterinario_id) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`;
+        
+        db.query(sql, [nombre, apellido, email, telefono, direccion, password_portal, veterinario_id], (err, result) => {
+            if (err) {
+                console.log('❌ Error al insertar cliente:', err);
+                return res.status(500).json({ error: 'Error al registrar cliente: ' + err.message });
             }
-        );
+            
+            const newId = result.rows[0].id;
+            console.log('✅ Cliente registrado con ID:', newId);
+            
+            res.json({
+                id: newId,
+                message: 'Cliente registrado exitosamente'
+            });
+        });
     } catch (error) {
         console.log('❌ Error general en registro:', error);
+        res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
+    }
+});
+
+// Ruta para editar clientes (solo por veterinarios autenticados)
+app.put('/api/clientes/:id', authenticateToken, async (req, res) => {
+    console.log('✏️ Solicitud de edición de cliente recibida:', req.body);
+    
+    try {
+        const clienteId = req.params.id;
+        const { nombre, apellido, email, telefono, direccion, password_portal } = req.body;
+        
+        if (!nombre || !apellido) {
+            console.log('❌ Campos obligatorios faltantes');
+            return res.status(400).json({ error: 'Nombre y apellido son obligatorios' });
+        }
+        
+        const veterinario_id = req.user.id;
+        
+        // Verificar que el cliente pertenece al veterinario autenticado
+        const checkSql = `SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2`;
+        db.query(checkSql, [clienteId, veterinario_id], (err, result) => {
+            if (err) {
+                console.log('❌ Error al verificar cliente:', err);
+                return res.status(500).json({ error: 'Error al verificar cliente: ' + err.message });
+            }
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Cliente no encontrado o no tienes permiso para editarlo' });
+            }
+            
+            console.log('💾 Actualizando cliente en base de datos...');
+            const updateSql = `UPDATE clientes 
+                              SET nombre = $1, apellido = $2, email = $3, telefono = $4, 
+                                  direccion = $5, password_portal = $6
+                              WHERE id = $7 AND veterinario_id = $8`;
+            
+            db.query(updateSql, [nombre, apellido, email, telefono, direccion, password_portal, clienteId, veterinario_id], (err, result) => {
+                if (err) {
+                    console.log('❌ Error al actualizar cliente:', err);
+                    return res.status(500).json({ error: 'Error al actualizar cliente: ' + err.message });
+                }
+                
+                console.log('✅ Cliente actualizado con ID:', clienteId);
+                res.json({
+                    id: clienteId,
+                    message: 'Cliente actualizado exitosamente'
+                });
+            });
+        });
+    } catch (error) {
+        console.log('❌ Error general en actualización:', error);
         res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
     }
 });
@@ -556,26 +608,40 @@ app.get('/api/clientes-con-mascotas', authenticateToken, (req, res) => {
 
 // Mascotas - Registrar mascota para un cliente específico
 app.post('/api/mascotas', authenticateToken, checkDemoLimits('pets'), (req, res) => {
-    const { nombre, especie, raza, edad, peso, color, sexo, cliente_id } = req.body;
+    const { 
+        nombre, especie, raza, edad, peso, pelaje, sexo, cliente_id, observaciones,
+        tiene_chip, numero_chip, tipo_alimento, marca_alimento, peso_bolsa_kg, 
+        fecha_inicio_bolsa, gramos_diarios 
+    } = req.body;
     
     // Verificar que el cliente pertenece al veterinario autenticado
-    db.get('SELECT id FROM clientes WHERE id = ? AND veterinario_id = ?', [cliente_id, req.user.id], (err, cliente) => {
+    const checkSql = 'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2';
+    db.query(checkSql, [cliente_id, req.user.id], (err, result) => {
         if (err) {
+            console.error('Error verificando cliente:', err);
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
         
-        if (!cliente) {
+        if (result.rows.length === 0) {
             return res.status(403).json({ error: 'No tienes permiso para agregar mascotas a este cliente' });
         }
         
-        const sql = `INSERT INTO mascotas (nombre, especie, raza, edad, peso, color, sexo, cliente_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO mascotas (
+            nombre, especie, raza, edad, peso, pelaje, sexo, cliente_id, veterinario_id, observaciones,
+            tiene_chip, numero_chip, tipo_alimento, marca_alimento, peso_bolsa_kg, 
+            fecha_inicio_bolsa, gramos_diarios
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`;
         
-        db.run(sql, [nombre, especie, raza, edad, peso, color, sexo, cliente_id], function(err) {
+        db.query(sql, [
+            nombre, especie, raza, edad, peso, pelaje, sexo, cliente_id, req.user.id, observaciones,
+            tiene_chip === 'true' || tiene_chip === true, numero_chip, tipo_alimento, marca_alimento, 
+            peso_bolsa_kg, fecha_inicio_bolsa, gramos_diarios
+        ], (err, result) => {
             if (err) {
-                res.status(500).json({ error: err.message });
-                return;
+                console.error('Error insertando mascota:', err);
+                return res.status(500).json({ error: err.message });
             }
-            res.json({ id: this.lastID, message: 'Mascota registrada exitosamente' });
+            res.json({ id: result.rows[0].id, message: 'Mascota registrada exitosamente' });
         });
     });
 });
@@ -585,16 +651,16 @@ app.get('/api/mascotas', authenticateToken, (req, res) => {
         SELECT m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido 
         FROM mascotas m 
         LEFT JOIN clientes c ON m.cliente_id = c.id 
-        WHERE c.veterinario_id = ?
-        ORDER BY m.fecha_registro DESC
+        WHERE c.veterinario_id = $1
+        ORDER BY m.created_at DESC
     `;
     
-    db.all(sql, [req.user.id], (err, rows) => {
+    db.query(sql, [req.user.id], (err, result) => {
         if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+            console.error('Error obteniendo mascotas:', err);
+            return res.status(500).json({ error: err.message });
         }
-        res.json(rows);
+        res.json(result.rows);
     });
 });
 
@@ -603,14 +669,17 @@ app.get('/api/mascotas/:id', (req, res) => {
         SELECT m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.telefono, c.email 
         FROM mascotas m 
         JOIN clientes c ON m.cliente_id = c.id 
-        WHERE m.id = ?
+        WHERE m.id = $1
     `;
-    db.get(sql, [req.params.id], (err, row) => {
+    db.query(sql, [req.params.id], (err, result) => {
         if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+            console.error('Error obteniendo mascota:', err);
+            return res.status(500).json({ error: err.message });
         }
-        res.json(row);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Mascota no encontrada' });
+        }
+        res.json(result.rows[0]);
     });
 });
 
@@ -824,7 +893,52 @@ app.use('/uploads', express.static('uploads'));
 
 // ENDPOINTS PARA PORTAL DEL PACIENTE
 
-// Buscar cliente y sus mascotas por nombre
+// Login de paciente con email y contraseña
+app.post('/api/paciente/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+        }
+        
+        // Buscar cliente por email y contraseña
+        const sql = `SELECT * FROM clientes WHERE email = $1 AND password_portal = $2`;
+        
+        db.query(sql, [email, password], (err, result) => {
+            if (err) {
+                console.error('Error en la base de datos:', err);
+                return res.status(500).json({ error: 'Error en la base de datos' });
+            }
+            
+            if (result.rows.length === 0) {
+                return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+            }
+            
+            const cliente = result.rows[0];
+            
+            // Buscar mascotas del cliente
+            const mascotasSql = `SELECT * FROM mascotas WHERE cliente_id = $1 ORDER BY created_at DESC`;
+            
+            db.query(mascotasSql, [cliente.id], (err, mascotasResult) => {
+                if (err) {
+                    console.error('Error obteniendo mascotas:', err);
+                    return res.status(500).json({ error: 'Error obteniendo mascotas' });
+                }
+                
+                res.json({
+                    cliente: cliente,
+                    mascotas: mascotasResult.rows
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error interno:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Buscar cliente y sus mascotas por nombre (método alternativo)
 app.post('/api/paciente/buscar', async (req, res) => {
     try {
         const { nombreCompleto, email } = req.body;
@@ -838,42 +952,45 @@ app.post('/api/paciente/buscar', async (req, res) => {
         const nombre = partes[0];
         const apellido = partes.slice(1).join(' ') || '';
         
-        // Buscar cliente por nombre y apellido (y opcionalmente email)
-        let sql = `SELECT * FROM clientes WHERE nombre LIKE ? AND apellido LIKE ?`;
+        // Buscar cliente por nombre y apellido (y opcionalmente email) usando PostgreSQL
+        let sql = `SELECT * FROM clientes WHERE nombre ILIKE $1 AND apellido ILIKE $2`;
         let params = [`%${nombre}%`, `%${apellido}%`];
         
         if (email) {
-            sql += ` AND email = ?`;
+            sql += ` AND email = $3`;
             params.push(email);
         }
         
-        db.all(sql, params, (err, clientes) => {
+        db.query(sql, params, (err, result) => {
             if (err) {
+                console.error('Error en la base de datos:', err);
                 return res.status(500).json({ error: 'Error en la base de datos' });
             }
             
-            if (clientes.length === 0) {
+            if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Cliente no encontrado' });
             }
             
             // Si hay múltiples clientes, tomar el primero
-            const cliente = clientes[0];
+            const cliente = result.rows[0];
             
             // Buscar mascotas del cliente
-            const mascotasSql = `SELECT * FROM mascotas WHERE cliente_id = ? ORDER BY fecha_registro DESC`;
+            const mascotasSql = `SELECT * FROM mascotas WHERE cliente_id = $1 ORDER BY created_at DESC`;
             
-            db.all(mascotasSql, [cliente.id], (err, mascotas) => {
+            db.query(mascotasSql, [cliente.id], (err, mascotasResult) => {
                 if (err) {
+                    console.error('Error obteniendo mascotas:', err);
                     return res.status(500).json({ error: 'Error obteniendo mascotas' });
                 }
                 
                 res.json({
                     cliente: cliente,
-                    mascotas: mascotas
+                    mascotas: mascotasResult.rows
                 });
             });
         });
     } catch (error) {
+        console.error('Error interno:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -883,52 +1000,59 @@ app.get('/api/paciente/informe/:mascotaId', async (req, res) => {
     const mascotaId = req.params.mascotaId;
     
     try {
-        // Obtener información de la mascota y cliente
+        // Obtener información de la mascota y cliente usando PostgreSQL
         const mascotaQuery = `
             SELECT m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.telefono, c.email
             FROM mascotas m 
             JOIN clientes c ON m.cliente_id = c.id 
-            WHERE m.id = ?
+            WHERE m.id = $1
         `;
         
-        db.get(mascotaQuery, [mascotaId], (err, mascota) => {
+        db.query(mascotaQuery, [mascotaId], (err, mascotaResult) => {
             if (err) {
+                console.error('Error en la base de datos:', err);
                 return res.status(500).json({ error: 'Error en la base de datos' });
             }
             
-            if (!mascota) {
+            if (mascotaResult.rows.length === 0) {
                 return res.status(404).json({ error: 'Mascota no encontrada' });
             }
             
+            const mascota = mascotaResult.rows[0];
+            
             // Obtener consultas
-            db.all('SELECT * FROM consultas WHERE mascota_id = ? ORDER BY fecha_consulta DESC', [mascotaId], (err, consultas) => {
+            db.query('SELECT * FROM consultas WHERE mascota_id = $1 ORDER BY fecha_consulta DESC', [mascotaId], (err, consultasResult) => {
                 if (err) {
+                    console.error('Error obteniendo consultas:', err);
                     return res.status(500).json({ error: 'Error obteniendo consultas' });
                 }
                 
                 // Obtener análisis
-                db.all('SELECT * FROM analisis WHERE mascota_id = ? ORDER BY fecha_analisis DESC', [mascotaId], (err, analisis) => {
+                db.query('SELECT * FROM analisis WHERE mascota_id = $1 ORDER BY fecha_analisis DESC', [mascotaId], (err, analisisResult) => {
                     if (err) {
+                        console.error('Error obteniendo análisis:', err);
                         return res.status(500).json({ error: 'Error obteniendo análisis' });
                     }
                     
                     // Obtener vacunas
-                    db.all('SELECT * FROM vacunas WHERE mascota_id = ? ORDER BY fecha_aplicacion DESC', [mascotaId], (err, vacunas) => {
+                    db.query('SELECT * FROM vacunas WHERE mascota_id = $1 ORDER BY fecha_aplicacion DESC', [mascotaId], (err, vacunasResult) => {
                         if (err) {
+                            console.error('Error obteniendo vacunas:', err);
                             return res.status(500).json({ error: 'Error obteniendo vacunas' });
                         }
                         
                         res.json({
                             mascota,
-                            consultas,
-                            analisis,
-                            vacunas
+                            consultas: consultasResult.rows,
+                            analisis: analisisResult.rows,
+                            vacunas: vacunasResult.rows
                         });
                     });
                 });
             });
         });
     } catch (error) {
+        console.error('Error interno:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -2551,14 +2675,128 @@ function getPlanPrice(plan) {
 
 // ==================== FIN PANEL DE ADMINISTRACIÓN ====================
 
+// ==================== SISTEMA DE NOTIFICACIONES ====================
+
+const cron = require('node-cron');
+const { 
+    verificarAlimentoMascotas,
+    obtenerConfiguracionNotificaciones,
+    actualizarConfiguracionNotificaciones
+} = require('./services/verificador-alimento');
+
+// Endpoint para obtener configuración de notificaciones
+app.get('/api/notificaciones/config', authenticateToken, async (req, res) => {
+    try {
+        const config = await obtenerConfiguracionNotificaciones(req.user.id);
+        res.json(config);
+    } catch (error) {
+        console.error('Error obteniendo configuración:', error);
+        res.status(500).json({ error: 'Error obteniendo configuración' });
+    }
+});
+
+// Endpoint para actualizar configuración de notificaciones
+app.put('/api/notificaciones/config', authenticateToken, async (req, res) => {
+    try {
+        const config = await actualizarConfiguracionNotificaciones(req.user.id, req.body);
+        res.json({ 
+            success: true, 
+            message: 'Configuración actualizada exitosamente',
+            config 
+        });
+    } catch (error) {
+        console.error('Error actualizando configuración:', error);
+        res.status(500).json({ error: 'Error actualizando configuración' });
+    }
+});
+
+// Endpoint para verificar alimento manualmente
+app.post('/api/notificaciones/verificar-alimento', authenticateToken, async (req, res) => {
+    try {
+        const resultado = await verificarAlimentoMascotas();
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error verificando alimento:', error);
+        res.status(500).json({ error: 'Error verificando alimento' });
+    }
+});
+
+// Endpoint para obtener historial de notificaciones
+app.get('/api/notificaciones/historial', authenticateToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT ne.*, m.nombre as mascota_nombre, c.nombre as cliente_nombre, c.apellido as cliente_apellido
+            FROM notificaciones_enviadas ne
+            LEFT JOIN mascotas m ON ne.mascota_id = m.id
+            LEFT JOIN clientes c ON ne.cliente_id = c.id
+            WHERE ne.veterinario_id = $1
+            ORDER BY ne.fecha_envio DESC
+            LIMIT 100
+        `;
+        
+        db.query(query, [req.user.id], (err, result) => {
+            if (err) {
+                console.error('Error obteniendo historial:', err);
+                return res.status(500).json({ error: 'Error obteniendo historial' });
+            }
+            res.json(result.rows);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Error obteniendo historial' });
+    }
+});
+
+// Endpoint para obtener alertas activas
+app.get('/api/notificaciones/alertas', authenticateToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT a.*, m.nombre as mascota_nombre, c.nombre as cliente_nombre, c.apellido as cliente_apellido
+            FROM alertas_alimento a
+            JOIN mascotas m ON a.mascota_id = m.id
+            JOIN clientes c ON m.cliente_id = c.id
+            WHERE m.veterinario_id = $1 AND a.dias_restantes <= 7
+            ORDER BY a.dias_restantes ASC, a.fecha_alerta DESC
+        `;
+        
+        db.query(query, [req.user.id], (err, result) => {
+            if (err) {
+                console.error('Error obteniendo alertas:', err);
+                return res.status(500).json({ error: 'Error obteniendo alertas' });
+            }
+            res.json(result.rows);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Error obteniendo alertas' });
+    }
+});
+
+// ==================== FIN SISTEMA DE NOTIFICACIONES ====================
+
 // Inicializar base de datos y iniciar servidor
 async function startServer() {
     try {
         await db.initializeDatabase();
+        
+        // Configurar tarea programada para verificar alimento
+        // Se ejecuta todos los días a las 9:00 AM
+        cron.schedule('0 9 * * *', async () => {
+            console.log('🔔 Ejecutando verificación programada de alimento...');
+            try {
+                await verificarAlimentoMascotas();
+            } catch (error) {
+                console.error('Error en verificación programada:', error);
+            }
+        });
+        
+        console.log('✅ Tarea programada configurada: Verificación de alimento diaria a las 9:00 AM');
+        
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en puerto ${PORT}`);
             console.log(`Accede a: http://localhost:${PORT}`);
             console.log(`Panel Admin: http://localhost:${PORT}/admin-panel.html`);
+            console.log(`🔔 Sistema de notificaciones activo`);
         });
     } catch (error) {
         console.error('Error iniciando servidor:', error);

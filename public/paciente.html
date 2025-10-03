@@ -38,15 +38,44 @@
                                     <div class="card-body">
                                         <form id="buscar-cliente-form">
                                             <div class="mb-3">
+                                                <label class="form-label">Email *</label>
+                                                <input type="email" class="form-control" id="emailBusqueda" placeholder="tu@email.com" required>
+                                                <small class="text-muted">Ingresa el email que registraste en la veterinaria</small>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Contraseña *</label>
+                                                <input type="password" class="form-control" id="passwordPortal" placeholder="Tu contraseña" required>
+                                                <small class="text-muted">Contraseña proporcionada por tu veterinaria</small>
+                                            </div>
+                                            <button type="submit" class="btn btn-success w-100">
+                                                <i class="fas fa-sign-in-alt me-1"></i>Acceder a Mis Mascotas
+                                            </button>
+                                            <hr class="my-3">
+                                            <p class="text-center mb-2"><small>¿No tienes contraseña?</small></p>
+                                            <button type="button" class="btn btn-outline-secondary w-100" onclick="mostrarBusquedaPorNombre()">
+                                                <i class="fas fa-search me-1"></i>Buscar solo por nombre
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Formulario alternativo de búsqueda por nombre (oculto por defecto) -->
+                                        <form id="buscar-nombre-form" style="display: none;">
+                                            <div class="alert alert-warning">
+                                                <small><i class="fas fa-exclamation-triangle me-1"></i>
+                                                Búsqueda por nombre. Para mayor seguridad, solicita tu contraseña a tu veterinaria.</small>
+                                            </div>
+                                            <div class="mb-3">
                                                 <label class="form-label">Nombre Completo</label>
                                                 <input type="text" class="form-control" id="nombreCompleto" placeholder="Ingresa tu nombre y apellido" required>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Email (opcional)</label>
-                                                <input type="email" class="form-control" id="emailBusqueda" placeholder="tu@email.com">
+                                                <input type="email" class="form-control" id="emailBusquedaNombre" placeholder="tu@email.com">
                                             </div>
                                             <button type="submit" class="btn btn-success w-100">
                                                 <i class="fas fa-search me-1"></i>Buscar Mis Mascotas
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" onclick="mostrarBusquedaPorEmail()">
+                                                <i class="fas fa-arrow-left me-1"></i>Volver a acceso con contraseña
                                             </button>
                                         </form>
                                     </div>
@@ -114,12 +143,61 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Buscar cliente y sus mascotas
+        // Funciones para alternar entre formularios
+        function mostrarBusquedaPorNombre() {
+            document.getElementById('buscar-cliente-form').style.display = 'none';
+            document.getElementById('buscar-nombre-form').style.display = 'block';
+        }
+        
+        function mostrarBusquedaPorEmail() {
+            document.getElementById('buscar-cliente-form').style.display = 'block';
+            document.getElementById('buscar-nombre-form').style.display = 'none';
+        }
+        
+        // Buscar cliente con email y contraseña (método principal)
         document.getElementById('buscar-cliente-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
             const email = document.getElementById('emailBusqueda').value.trim();
+            const password = document.getElementById('passwordPortal').value.trim();
+            
+            if (!email || !password) {
+                alert('Por favor ingresa tu email y contraseña');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/paciente/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.mascotas && data.mascotas.length > 0) {
+                    mostrarMascotas(data.cliente, data.mascotas);
+                } else if (response.status === 401) {
+                    alert('Email o contraseña incorrectos. Por favor verifica tus datos o contacta a tu veterinaria.');
+                } else {
+                    alert('No se encontraron mascotas registradas. Contacta a tu veterinaria.');
+                }
+            } catch (error) {
+                alert('Error de conexión. Por favor intenta nuevamente.');
+            }
+        });
+        
+        // Buscar cliente por nombre (método alternativo)
+        document.getElementById('buscar-nombre-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
+            const email = document.getElementById('emailBusquedaNombre').value.trim();
             
             if (!nombreCompleto) {
                 alert('Por favor ingresa tu nombre completo');

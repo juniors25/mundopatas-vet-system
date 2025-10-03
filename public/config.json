@@ -1,0 +1,19 @@
+{
+  "appName": "MUNDO PATAS",
+  "version": "2.0.0",
+  "environment": "development",
+  "features": {
+    "notifications": true,
+    "telemedicine": true,
+    "inventory": true,
+    "billing": true,
+    "reports": true
+  },
+  "limits": {
+    "maxClients": 1000,
+    "maxPets": 5000,
+    "maxConsultations": 10000,
+    "storageGB": 10
+  },
+  "demo": false
+}
