@@ -223,8 +223,54 @@ async function initializeDatabase() {
                 motivo TEXT NOT NULL,
                 estado TEXT DEFAULT 'programada',
                 observaciones TEXT,
+                monto DECIMAL(10,2) DEFAULT 0,
+                metodo_pago TEXT DEFAULT 'efectivo',
+                pago_confirmado BOOLEAN DEFAULT false,
+                payment_id TEXT,
+                fecha_pago TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Migración: Agregar campos de pago si no existen
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='citas' AND column_name='monto'
+                ) THEN
+                    ALTER TABLE citas ADD COLUMN monto DECIMAL(10,2) DEFAULT 0;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='citas' AND column_name='metodo_pago'
+                ) THEN
+                    ALTER TABLE citas ADD COLUMN metodo_pago TEXT DEFAULT 'efectivo';
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='citas' AND column_name='pago_confirmado'
+                ) THEN
+                    ALTER TABLE citas ADD COLUMN pago_confirmado BOOLEAN DEFAULT false;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='citas' AND column_name='payment_id'
+                ) THEN
+                    ALTER TABLE citas ADD COLUMN payment_id TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='citas' AND column_name='fecha_pago'
+                ) THEN
+                    ALTER TABLE citas ADD COLUMN fecha_pago TIMESTAMP;
+                END IF;
+            END $$;
         `);
 
         await pool.query(`

@@ -7,6 +7,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <style>
+        .stat-card {
+            border-left: 4px solid;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
     <!-- Navbar -->
@@ -129,13 +139,39 @@
                         <i class="fas fa-dollar-sign me-2"></i>
                         <strong>Nueva Funcionalidad:</strong> Control completo de facturación, pagos y estados financieros.
                     </div>
+                    
+                    <!-- Tarjetas de estadísticas -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card stat-card border-success">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Total Ingresado</h6>
+                                    <h3 class="text-success" id="total-ingresado">$0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card border-warning">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Total Pendiente</h6>
+                                    <h3 class="text-warning" id="total-pendiente">$0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card border-info">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Facturas Pendientes</h6>
+                                    <h3 class="text-info" id="facturas-pendientes">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <button class="btn btn-primary me-2" onclick="showFacturaModal()">
                                 <i class="fas fa-plus me-1"></i>Nueva Factura
-                            </button>
-                            <button class="btn btn-success" onclick="showPagoModal()">
-                                <i class="fas fa-money-bill-wave me-1"></i>Registrar Pago
                             </button>
                         </div>
                     </div>
@@ -143,18 +179,17 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>Número</th>
+                                    <th>N° Factura</th>
                                     <th>Fecha</th>
                                     <th>Cliente</th>
                                     <th>Total</th>
                                     <th>Estado</th>
-                                    <th>Saldo</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="facturas-list">
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">
+                                    <td colspan="6" class="text-center text-muted">
                                         <i class="fas fa-file-invoice fa-2x mb-2"></i><br>
                                         No hay facturas registradas. Crea tu primera factura.
                                     </td>
@@ -360,6 +395,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="citas-facturacion.js"></script>
     <script>
         // Función para mostrar secciones
         function showSection(sectionName) {
@@ -370,23 +406,12 @@
             });
             
             // Mostrar la sección seleccionada
-            const targetSection = document.getElementById(sectionName + '-section');
-            if (targetSection) {
-                targetSection.style.display = 'block';
+            const section = document.getElementById(sectionName + '-section');
+            if (section) {
+                section.style.display = 'block';
             }
             
-            // Actualizar navegación activa
-            const navLinks = document.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-            });
-            
-            // Cargar datos de la sección
-            loadSectionData(sectionName);
-        }
-
-        // Función para cargar datos de cada sección
-        function loadSectionData(sectionName) {
+            // Cargar datos según la sección
             const token = localStorage.getItem('token');
             
             switch(sectionName) {
@@ -411,60 +436,29 @@
             }
         }
 
-        // Funciones placeholder para cargar datos
-        function loadCitas() {
-            console.log('Cargando citas...');
-            // Aquí se implementaría la carga de citas desde la API
-        }
-
-        function loadFacturas() {
-            console.log('Cargando facturas...');
-            // Aquí se implementaría la carga de facturas desde la API
-        }
-
+        // Funciones placeholder para secciones no implementadas
         function loadInventario() {
             console.log('Cargando inventario...');
-            // Aquí se implementaría la carga de medicamentos desde la API
         }
 
         function loadNotificaciones() {
             console.log('Cargando notificaciones...');
-            // Aquí se implementaría la carga de notificaciones desde la API
         }
 
         function loadReportes() {
             console.log('Cargando reportes...');
-            // Aquí se implementaría la carga de reportes desde la API
         }
 
         function loadTelemedicina() {
-            console.log('Cargando sesiones de telemedicina...');
-            // Aquí se implementaría la carga de sesiones desde la API
+            console.log('Cargando telemedicina...');
         }
 
-        // Funciones placeholder para modales
-        function showCitaModal() {
-            alert('Modal de nueva cita - Funcionalidad en desarrollo');
-        }
-
-        function showFacturaModal() {
-            alert('Modal de nueva factura - Funcionalidad en desarrollo');
-        }
-
-        function showPagoModal() {
-            alert('Modal de registrar pago - Funcionalidad en desarrollo');
-        }
-
-        function showMedicamentoModal() {
-            alert('Modal de nuevo medicamento - Funcionalidad en desarrollo');
+        function showProductoModal() {
+            alert('Modal de nuevo producto - Funcionalidad en desarrollo');
         }
 
         function showSesionModal() {
             alert('Modal de nueva sesión - Funcionalidad en desarrollo');
-        }
-
-        function filtrarCitas() {
-            alert('Filtro de citas - Funcionalidad en desarrollo');
         }
 
         function filtrarInventario() {

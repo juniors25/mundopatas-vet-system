@@ -441,6 +441,337 @@ app.get('/api/analisis/:mascotaId', authenticateToken, async (req, res) => {
     }
 });
 
+// RUTAS DE CITAS
+app.post('/api/citas', authenticateToken, async (req, res) => {
+    const { cliente_id, mascota_id, fecha_cita, motivo, observaciones, monto, metodo_pago } = req.body;
+    
+    try {
+        // Verificar permisos
+        const clienteCheck = await pool.query(`
+            SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2
+        `, [cliente_id, req.user.id]);
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para crear citas para este cliente' });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO citas (veterinario_id, cliente_id, mascota_id, fecha_cita, motivo, observaciones, monto, metodo_pago, estado) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [req.user.id, cliente_id, mascota_id, fecha_cita, motivo, observaciones, monto || 0, metodo_pago || 'efectivo', 'programada']
+        );
+
+        res.json({ message: 'Cita creada exitosamente', cita: result.rows[0] });
+    } catch (error) {
+        console.error('Error creando cita:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+app.get('/api/citas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT c.*, 
+                   cl.nombre as cliente_nombre, cl.apellido as cliente_apellido,
+                   m.nombre as mascota_nombre, m.especie
+            FROM citas c
+            JOIN clientes cl ON c.cliente_id = cl.id
+            LEFT JOIN mascotas m ON c.mascota_id = m.id
+            WHERE c.veterinario_id = $1
+            ORDER BY c.fecha_cita DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo citas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+app.put('/api/citas/:id', authenticateToken, async (req, res) => {
+    const { estado, observaciones, pago_confirmado } = req.body;
+    
+    try {
+        // Verificar permisos
+        const citaCheck = await pool.query(`
+            SELECT id FROM citas WHERE id = $1 AND veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (citaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para modificar esta cita' });
+        }
+
+        const result = await pool.query(
+            `UPDATE citas SET estado = $1, observaciones = $2, pago_confirmado = $3 WHERE id = $4 RETURNING *`,
+            [estado, observaciones, pago_confirmado, req.params.id]
+        );
+
+        res.json({ message: 'Cita actualizada exitosamente', cita: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando cita:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+app.delete('/api/citas/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const citaCheck = await pool.query(`
+            SELECT id FROM citas WHERE id = $1 AND veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (citaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta cita' });
+        }
+
+        await pool.query('DELETE FROM citas WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Cita eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando cita:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ENDPOINT PARA PROCESAR PAGO DE CITA (Mercado Pago)
+app.post('/api/citas/:id/pago', authenticateToken, async (req, res) => {
+    const { payment_id, status, payment_method } = req.body;
+    
+    try {
+        // Verificar permisos
+        const citaCheck = await pool.query(`
+            SELECT id, monto FROM citas WHERE id = $1 AND veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (citaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Cita no encontrada' });
+        }
+
+        // Actualizar estado de pago
+        const result = await pool.query(
+            `UPDATE citas SET 
+                pago_confirmado = $1, 
+                payment_id = $2, 
+                metodo_pago = $3,
+                fecha_pago = CURRENT_TIMESTAMP
+             WHERE id = $4 RETURNING *`,
+            [status === 'approved', payment_id, payment_method, req.params.id]
+        );
+
+        res.json({ message: 'Pago procesado exitosamente', cita: result.rows[0] });
+    } catch (error) {
+        console.error('Error procesando pago:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== ENDPOINTS DE FACTURACIÓN ====================
+
+// Crear factura
+app.post('/api/facturas', authenticateToken, async (req, res) => {
+    const { cliente_id, items, subtotal, impuestos, total, fecha_factura } = req.body;
+    
+    try {
+        // Verificar que el cliente pertenece al veterinario
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [cliente_id, req.user.id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Cliente no encontrado' });
+        }
+
+        // Generar número de factura único
+        const yearMonth = new Date().toISOString().slice(0, 7).replace('-', '');
+        const countResult = await pool.query(
+            'SELECT COUNT(*) as count FROM facturas WHERE veterinario_id = $1 AND numero_factura LIKE $2',
+            [req.user.id, `${yearMonth}%`]
+        );
+        const count = parseInt(countResult.rows[0].count) + 1;
+        const numero_factura = `${yearMonth}-${String(count).padStart(4, '0')}`;
+
+        // Insertar factura
+        const facturaResult = await pool.query(
+            `INSERT INTO facturas (veterinario_id, cliente_id, numero_factura, fecha_factura, subtotal, impuestos, total, estado)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendiente') RETURNING *`,
+            [req.user.id, cliente_id, numero_factura, fecha_factura || new Date(), subtotal, impuestos || 0, total]
+        );
+
+        const factura = facturaResult.rows[0];
+
+        // Insertar items de la factura
+        for (const item of items) {
+            await pool.query(
+                `INSERT INTO factura_items (factura_id, descripcion, cantidad, precio_unitario, subtotal)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [factura.id, item.descripcion, item.cantidad, item.precio_unitario, item.subtotal]
+            );
+        }
+
+        // Obtener factura completa con items
+        const facturaCompleta = await pool.query(
+            `SELECT f.*, 
+                    c.nombre as cliente_nombre, 
+                    c.apellido as cliente_apellido,
+                    c.email as cliente_email,
+                    c.telefono as cliente_telefono,
+                    json_agg(json_build_object(
+                        'id', fi.id,
+                        'descripcion', fi.descripcion,
+                        'cantidad', fi.cantidad,
+                        'precio_unitario', fi.precio_unitario,
+                        'subtotal', fi.subtotal
+                    )) as items
+             FROM facturas f
+             JOIN clientes c ON f.cliente_id = c.id
+             LEFT JOIN factura_items fi ON f.id = fi.factura_id
+             WHERE f.id = $1
+             GROUP BY f.id, c.nombre, c.apellido, c.email, c.telefono`,
+            [factura.id]
+        );
+
+        res.json({ message: 'Factura creada exitosamente', factura: facturaCompleta.rows[0] });
+    } catch (error) {
+        console.error('Error creando factura:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener todas las facturas
+app.get('/api/facturas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT f.*, 
+                    c.nombre as cliente_nombre, 
+                    c.apellido as cliente_apellido,
+                    c.email as cliente_email,
+                    c.telefono as cliente_telefono
+             FROM facturas f
+             JOIN clientes c ON f.cliente_id = c.id
+             WHERE f.veterinario_id = $1
+             ORDER BY f.fecha_factura DESC, f.created_at DESC`,
+            [req.user.id]
+        );
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo facturas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener factura por ID con items
+app.get('/api/facturas/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT f.*, 
+                    c.nombre as cliente_nombre, 
+                    c.apellido as cliente_apellido,
+                    c.email as cliente_email,
+                    c.telefono as cliente_telefono,
+                    c.direccion as cliente_direccion,
+                    json_agg(json_build_object(
+                        'id', fi.id,
+                        'descripcion', fi.descripcion,
+                        'cantidad', fi.cantidad,
+                        'precio_unitario', fi.precio_unitario,
+                        'subtotal', fi.subtotal
+                    )) as items
+             FROM facturas f
+             JOIN clientes c ON f.cliente_id = c.id
+             LEFT JOIN factura_items fi ON f.id = fi.factura_id
+             WHERE f.id = $1 AND f.veterinario_id = $2
+             GROUP BY f.id, c.nombre, c.apellido, c.email, c.telefono, c.direccion`,
+            [req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Factura no encontrada' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo factura:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar estado de factura
+app.put('/api/facturas/:id', authenticateToken, async (req, res) => {
+    const { estado } = req.body;
+    
+    try {
+        // Verificar permisos
+        const facturaCheck = await pool.query(
+            'SELECT id FROM facturas WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (facturaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Factura no encontrada' });
+        }
+
+        const result = await pool.query(
+            'UPDATE facturas SET estado = $1 WHERE id = $2 RETURNING *',
+            [estado, req.params.id]
+        );
+
+        res.json({ message: 'Factura actualizada exitosamente', factura: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando factura:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar factura
+app.delete('/api/facturas/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const facturaCheck = await pool.query(
+            'SELECT id FROM facturas WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (facturaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Factura no encontrada' });
+        }
+
+        // Eliminar items primero
+        await pool.query('DELETE FROM factura_items WHERE factura_id = $1', [req.params.id]);
+        
+        // Eliminar factura
+        await pool.query('DELETE FROM facturas WHERE id = $1', [req.params.id]);
+
+        res.json({ message: 'Factura eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando factura:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener estadísticas de facturación
+app.get('/api/facturas/stats/resumen', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                COUNT(*) as total_facturas,
+                SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
+                SUM(CASE WHEN estado = 'pagada' THEN 1 ELSE 0 END) as pagadas,
+                SUM(CASE WHEN estado = 'cancelada' THEN 1 ELSE 0 END) as canceladas,
+                COALESCE(SUM(CASE WHEN estado = 'pagada' THEN total ELSE 0 END), 0) as total_ingresado,
+                COALESCE(SUM(CASE WHEN estado = 'pendiente' THEN total ELSE 0 END), 0) as total_pendiente
+             FROM facturas
+             WHERE veterinario_id = $1`,
+            [req.user.id]
+        );
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo estadísticas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // RUTA DE INFORME COMPLETO
 app.get('/api/informe/:mascotaId', authenticateToken, async (req, res) => {
     const mascotaId = req.params.mascotaId;
