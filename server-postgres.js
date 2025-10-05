@@ -1638,6 +1638,148 @@ app.get('/paciente', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'paciente.html'));
 });
 
+// ==================== ENDPOINTS DE REPORTES Y ESTADÍSTICAS ====================
+
+// Dashboard de reportes
+app.get('/api/reportes/dashboard', authenticateToken, async (req, res) => {
+    try {
+        const veterinarioId = req.user.id;
+        const mesActual = new Date();
+        const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
+        
+        // Ingresos del mes
+        const ingresosResult = await pool.query(`
+            SELECT COALESCE(SUM(total), 0) as total
+            FROM facturas
+            WHERE veterinario_id = $1
+            AND fecha_factura >= $2
+            AND estado = 'pagada'
+        `, [veterinarioId, primerDiaMes]);
+        
+        // Consultas del mes
+        const consultasResult = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM consultas
+            WHERE veterinario_id = $1
+            AND fecha_consulta >= $2
+        `, [veterinarioId, primerDiaMes]);
+        
+        // Citas pendientes
+        const citasResult = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM citas
+            WHERE veterinario_id = $1
+            AND estado IN ('programada', 'confirmada')
+            AND fecha_cita >= CURRENT_DATE
+        `, [veterinarioId]);
+        
+        // Stock bajo
+        const stockResult = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM inventario_productos
+            WHERE veterinario_id = $1
+            AND stock_actual <= stock_minimo
+            AND activo = true
+        `, [veterinarioId]);
+        
+        // Total clientes
+        const clientesResult = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM clientes
+            WHERE veterinario_id = $1
+        `, [veterinarioId]);
+        
+        // Total mascotas
+        const mascotasResult = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM mascotas
+            WHERE veterinario_id = $1
+        `, [veterinarioId]);
+        
+        res.json({
+            ingresos_mes: parseFloat(ingresosResult.rows[0].total),
+            consultas_mes: parseInt(consultasResult.rows[0].total),
+            citas_pendientes: parseInt(citasResult.rows[0].total),
+            stock_bajo: parseInt(stockResult.rows[0].total),
+            total_clientes: parseInt(clientesResult.rows[0].total),
+            total_mascotas: parseInt(mascotasResult.rows[0].total)
+        });
+    } catch (error) {
+        console.error('Error obteniendo dashboard:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Reporte de ingresos por mes
+app.get('/api/reportes/ingresos-mensuales', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                TO_CHAR(fecha_factura, 'YYYY-MM') as mes,
+                SUM(total) as total_ingresos,
+                COUNT(*) as cantidad_facturas
+            FROM facturas
+            WHERE veterinario_id = $1
+            AND estado = 'pagada'
+            AND fecha_factura >= CURRENT_DATE - INTERVAL '12 months'
+            GROUP BY TO_CHAR(fecha_factura, 'YYYY-MM')
+            ORDER BY mes DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo ingresos mensuales:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Reporte de consultas por tipo
+app.get('/api/reportes/consultas-tipo', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                motivo_consulta,
+                COUNT(*) as cantidad
+            FROM consultas
+            WHERE veterinario_id = $1
+            AND fecha_consulta >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY motivo_consulta
+            ORDER BY cantidad DESC
+            LIMIT 10
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo consultas por tipo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Reporte de productos más vendidos
+app.get('/api/reportes/productos-vendidos', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                fi.descripcion,
+                SUM(fi.cantidad) as total_vendido,
+                SUM(fi.subtotal) as total_ingresos
+            FROM factura_items fi
+            JOIN facturas f ON fi.factura_id = f.id
+            WHERE f.veterinario_id = $1
+            AND f.estado = 'pagada'
+            AND f.fecha_factura >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY fi.descripcion
+            ORDER BY total_vendido DESC
+            LIMIT 10
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo productos vendidos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // ==================== ENDPOINTS DE NOTIFICACIONES MANUALES ====================
 
 // Importar funciones de verificación
