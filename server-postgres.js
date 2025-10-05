@@ -441,7 +441,86 @@ app.get('/api/analisis/:mascotaId', authenticateToken, async (req, res) => {
     }
 });
 
-// RUTAS DE CITAS
+// ==================== ENDPOINT PÚBLICO PARA AGENDAR CITAS (CLIENTES) ====================
+
+// Crear cita pública (sin autenticación - para clientes)
+app.post('/api/citas/publica', async (req, res) => {
+    const { 
+        veterinario_id, cliente_nombre, cliente_email, cliente_telefono,
+        mascota_nombre, mascota_especie, fecha_cita, hora_cita,
+        motivo, metodo_pago, monto
+    } = req.body;
+    
+    try {
+        // Verificar que el veterinario existe
+        const vetCheck = await pool.query('SELECT id FROM veterinarios WHERE id = $1', [veterinario_id]);
+        if (vetCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+
+        // Buscar o crear cliente
+        let cliente = await pool.query(
+            'SELECT id FROM clientes WHERE email = $1 AND veterinario_id = $2',
+            [cliente_email, veterinario_id]
+        );
+
+        let cliente_id;
+        if (cliente.rows.length === 0) {
+            // Crear nuevo cliente
+            const nombres = cliente_nombre.split(' ');
+            const nombre = nombres[0];
+            const apellido = nombres.slice(1).join(' ') || '';
+            
+            const nuevoCliente = await pool.query(
+                'INSERT INTO clientes (veterinario_id, nombre, apellido, email, telefono) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [veterinario_id, nombre, apellido, cliente_email, cliente_telefono]
+            );
+            cliente_id = nuevoCliente.rows[0].id;
+        } else {
+            cliente_id = cliente.rows[0].id;
+        }
+
+        // Buscar o crear mascota
+        let mascota = await pool.query(
+            'SELECT id FROM mascotas WHERE nombre = $1 AND cliente_id = $2',
+            [mascota_nombre, cliente_id]
+        );
+
+        let mascota_id;
+        if (mascota.rows.length === 0) {
+            // Crear nueva mascota
+            const nuevaMascota = await pool.query(
+                'INSERT INTO mascotas (veterinario_id, cliente_id, nombre, especie) VALUES ($1, $2, $3, $4) RETURNING id',
+                [veterinario_id, cliente_id, mascota_nombre, mascota_especie]
+            );
+            mascota_id = nuevaMascota.rows[0].id;
+        } else {
+            mascota_id = mascota.rows[0].id;
+        }
+
+        // Crear la cita
+        const fecha_cita_completa = `${fecha_cita}T${hora_cita}:00`;
+        const pago_confirmado = metodo_pago !== 'efectivo';
+        
+        const result = await pool.query(
+            `INSERT INTO citas (veterinario_id, cliente_id, mascota_id, fecha_cita, motivo, estado, monto, metodo_pago, pago_confirmado) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [veterinario_id, cliente_id, mascota_id, fecha_cita_completa, motivo, 'programada', monto, metodo_pago, pago_confirmado]
+        );
+
+        res.json({ 
+            message: 'Cita agendada exitosamente', 
+            cita: result.rows[0],
+            cliente_id,
+            mascota_id
+        });
+    } catch (error) {
+        console.error('Error creando cita pública:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// RUTAS DE CITAS (VETERINARIO)
 app.post('/api/citas', authenticateToken, async (req, res) => {
     const { cliente_id, mascota_id, fecha_cita, motivo, observaciones, monto, metodo_pago } = req.body;
     
@@ -1096,6 +1175,94 @@ app.get('/api/mascotas/:id/alimento-restante', authenticateToken, async (req, re
 
 // Servir archivos estáticos
 app.use('/uploads', express.static('uploads'));
+
+// ==================== CONFIGURACIÓN DE PAGOS DEL VETERINARIO ====================
+
+// Obtener configuración de pagos
+app.get('/api/veterinario/config-pagos', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT cbu_cvu, alias_cbu, titular_cuenta, mercadopago_public_key,
+                   precio_consulta, acepta_mercadopago, acepta_transferencia, acepta_efectivo
+            FROM veterinarios WHERE id = $1
+        `, [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo configuración de pagos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar configuración de pagos
+app.put('/api/veterinario/config-pagos', authenticateToken, async (req, res) => {
+    const {
+        cbu_cvu,
+        alias_cbu,
+        titular_cuenta,
+        mercadopago_access_token,
+        mercadopago_public_key,
+        precio_consulta,
+        acepta_mercadopago,
+        acepta_transferencia,
+        acepta_efectivo
+    } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            UPDATE veterinarios SET
+                cbu_cvu = $1,
+                alias_cbu = $2,
+                titular_cuenta = $3,
+                mercadopago_access_token = $4,
+                mercadopago_public_key = $5,
+                precio_consulta = $6,
+                acepta_mercadopago = $7,
+                acepta_transferencia = $8,
+                acepta_efectivo = $9
+            WHERE id = $10
+            RETURNING cbu_cvu, alias_cbu, titular_cuenta, mercadopago_public_key,
+                      precio_consulta, acepta_mercadopago, acepta_transferencia, acepta_efectivo
+        `, [
+            cbu_cvu, alias_cbu, titular_cuenta, mercadopago_access_token,
+            mercadopago_public_key, precio_consulta, acepta_mercadopago,
+            acepta_transferencia, acepta_efectivo, req.user.id
+        ]);
+        
+        res.json({
+            message: 'Configuración de pagos actualizada exitosamente',
+            config: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error actualizando configuración de pagos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener configuración pública de pagos de un veterinario (para clientes)
+app.get('/api/veterinario/:id/metodos-pago', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT nombre_veterinaria, nombre_veterinario, cbu_cvu, alias_cbu, titular_cuenta,
+                   mercadopago_public_key, precio_consulta, acepta_mercadopago,
+                   acepta_transferencia, acepta_efectivo
+            FROM veterinarios WHERE id = $1
+        `, [req.params.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo métodos de pago:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 
 // Rutas principales
 app.get('/', (req, res) => {

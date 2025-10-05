@@ -29,6 +29,16 @@ async function initializeDatabase() {
                 telefono TEXT,
                 direccion TEXT,
                 rol TEXT DEFAULT 'admin',
+                -- Configuración de pagos
+                cbu_cvu TEXT,
+                alias_cbu TEXT,
+                titular_cuenta TEXT,
+                mercadopago_access_token TEXT,
+                mercadopago_public_key TEXT,
+                precio_consulta DECIMAL(10,2) DEFAULT 5000.00,
+                acepta_mercadopago BOOLEAN DEFAULT false,
+                acepta_transferencia BOOLEAN DEFAULT true,
+                acepta_efectivo BOOLEAN DEFAULT true,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -47,15 +57,45 @@ async function initializeDatabase() {
             )
         `);
         
-        // Agregar columna password_portal si no existe (para bases de datos existentes)
+        // Agregar columnas si no existen (para bases de datos existentes)
         await pool.query(`
             DO $$ 
             BEGIN 
+                -- Columna password_portal en clientes
                 IF NOT EXISTS (
                     SELECT 1 FROM information_schema.columns 
                     WHERE table_name='clientes' AND column_name='password_portal'
                 ) THEN
                     ALTER TABLE clientes ADD COLUMN password_portal TEXT;
+                END IF;
+                
+                -- Columnas de configuración de pagos en veterinarios
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='cbu_cvu') THEN
+                    ALTER TABLE veterinarios ADD COLUMN cbu_cvu TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='alias_cbu') THEN
+                    ALTER TABLE veterinarios ADD COLUMN alias_cbu TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='titular_cuenta') THEN
+                    ALTER TABLE veterinarios ADD COLUMN titular_cuenta TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='mercadopago_access_token') THEN
+                    ALTER TABLE veterinarios ADD COLUMN mercadopago_access_token TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='mercadopago_public_key') THEN
+                    ALTER TABLE veterinarios ADD COLUMN mercadopago_public_key TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='precio_consulta') THEN
+                    ALTER TABLE veterinarios ADD COLUMN precio_consulta DECIMAL(10,2) DEFAULT 5000.00;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='acepta_mercadopago') THEN
+                    ALTER TABLE veterinarios ADD COLUMN acepta_mercadopago BOOLEAN DEFAULT false;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='acepta_transferencia') THEN
+                    ALTER TABLE veterinarios ADD COLUMN acepta_transferencia BOOLEAN DEFAULT true;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='acepta_efectivo') THEN
+                    ALTER TABLE veterinarios ADD COLUMN acepta_efectivo BOOLEAN DEFAULT true;
                 END IF;
             END $$;
         `);

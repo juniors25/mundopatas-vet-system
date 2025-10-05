@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar Cita - MUNDO PATAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-paw me-2"></i>MUNDO PATAS
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <!-- Paso 1: Información de la Cita -->
+                <div id="paso1" class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-calendar-plus me-2"></i>
+                            Agendar Nueva Cita
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="citaForm">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre completo del dueño *</label>
+                                <input type="text" class="form-control" id="cliente_nombre" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="cliente_email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Teléfono *</label>
+                                <input type="tel" class="form-control" id="cliente_telefono" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nombre de la mascota *</label>
+                                <input type="text" class="form-control" id="mascota_nombre" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Especie *</label>
+                                <select class="form-select" id="mascota_especie" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Perro">Perro</option>
+                                    <option value="Gato">Gato</option>
+                                    <option value="Ave">Ave</option>
+                                    <option value="Conejo">Conejo</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Fecha de la cita *</label>
+                                <input type="date" class="form-control" id="fecha_cita" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Hora *</label>
+                                <input type="time" class="form-control" id="hora_cita" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Motivo de la consulta *</label>
+                                <textarea class="form-control" id="motivo_consulta" rows="3" required></textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-arrow-right me-2"></i>Continuar al Pago
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Selección de Método de Pago -->
+                <div id="paso2" class="card mb-4" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Método de Pago
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Precio de la consulta:</strong> $<span id="precio_display">0.00</span>
+                        </div>
+
+                        <h5 class="mb-3">Selecciona tu método de pago:</h5>
+
+                        <!-- Transferencia Bancaria -->
+                        <div id="metodo-transferencia" class="card mb-3" style="display: none;">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="radio_transferencia" value="transferencia">
+                                    <label class="form-check-label" for="radio_transferencia">
+                                        <h5><i class="fas fa-university me-2"></i>Transferencia Bancaria</h5>
+                                    </label>
+                                </div>
+                                <div id="datos-transferencia" class="mt-3" style="display: none;">
+                                    <div class="alert alert-warning">
+                                        <strong>Datos para transferencia:</strong><br>
+                                        <strong>CBU/CVU:</strong> <span id="cbu_display"></span><br>
+                                        <strong>Alias:</strong> <span id="alias_display"></span><br>
+                                        <strong>Titular:</strong> <span id="titular_display"></span><br>
+                                        <strong>Monto:</strong> $<span id="monto_transferencia"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Comprobante de transferencia (opcional)</label>
+                                        <input type="file" class="form-control" id="comprobante_pago" accept="image/*">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mercado Pago -->
+                        <div id="metodo-mercadopago" class="card mb-3" style="display: none;">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="radio_mercadopago" value="mercadopago">
+                                    <label class="form-check-label" for="radio_mercadopago">
+                                        <h5><i class="fas fa-mobile-alt me-2"></i>Mercado Pago</h5>
+                                    </label>
+                                </div>
+                                <div id="mercadopago-container" class="mt-3" style="display: none;">
+                                    <div id="mercadopago-button"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Efectivo -->
+                        <div id="metodo-efectivo" class="card mb-3" style="display: none;">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="radio_efectivo" value="efectivo">
+                                    <label class="form-check-label" for="radio_efectivo">
+                                        <h5><i class="fas fa-money-bill-wave me-2"></i>Efectivo (Pagar en consultorio)</h5>
+                                    </label>
+                                </div>
+                                <div id="datos-efectivo" class="mt-3" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Podrás pagar en efectivo al momento de la consulta. 
+                                        Tu cita quedará como "Pendiente de pago" hasta que realices el pago.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-secondary" onclick="volverPaso1()">
+                                <i class="fas fa-arrow-left me-2"></i>Volver
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg" onclick="confirmarCita()">
+                                <i class="fas fa-check me-2"></i>Confirmar Cita
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Confirmación -->
+                <div id="paso3" class="card" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            ¡Cita Agendada!
+                        </h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                        <h3 class="mt-3">Tu cita ha sido agendada exitosamente</h3>
+                        <p class="lead">Recibirás un email de confirmación con los detalles de tu cita.</p>
+                        <div id="detalles-cita" class="alert alert-info text-start mt-4"></div>
+                        <a href="/" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        const urlParams = new URLSearchParams(window.location.search);
+        const veterinarioId = urlParams.get('vet');
+        
+        let configPagos = null;
+        let citaData = {};
+
+        // Cargar configuración de pagos del veterinario
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!veterinarioId) {
+                alert('URL inválida. Falta el ID del veterinario.');
+                return;
+            }
+
+            // Establecer fecha mínima (hoy)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha_cita').min = today;
+
+            await cargarConfigPagos();
+        });
+
+        async function cargarConfigPagos() {
+            try {
+                const response = await fetch(`${API_URL}/api/veterinario/${veterinarioId}/metodos-pago`);
+                
+                if (!response.ok) {
+                    alert('Error al cargar información del veterinario');
+                    return;
+                }
+
+                configPagos = await response.json();
+                document.getElementById('precio_display').textContent = parseFloat(configPagos.precio_consulta).toFixed(2);
+
+                // Mostrar métodos de pago disponibles
+                if (configPagos.acepta_transferencia) {
+                    document.getElementById('metodo-transferencia').style.display = 'block';
+                    document.getElementById('cbu_display').textContent = configPagos.cbu_cvu;
+                    document.getElementById('alias_display').textContent = configPagos.alias_cbu;
+                    document.getElementById('titular_display').textContent = configPagos.titular_cuenta;
+                    document.getElementById('monto_transferencia').textContent = parseFloat(configPagos.precio_consulta).toFixed(2);
+                }
+
+                if (configPagos.acepta_mercadopago && configPagos.mercadopago_public_key) {
+                    document.getElementById('metodo-mercadopago').style.display = 'block';
+                }
+
+                if (configPagos.acepta_efectivo) {
+                    document.getElementById('metodo-efectivo').style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar configuración de pagos');
+            }
+        }
+
+        // Event listeners para mostrar detalles de cada método
+        document.querySelectorAll('input[name="metodo_pago"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('datos-transferencia').style.display = 'none';
+                document.getElementById('mercadopago-container').style.display = 'none';
+                document.getElementById('datos-efectivo').style.display = 'none';
+
+                if (this.value === 'transferencia') {
+                    document.getElementById('datos-transferencia').style.display = 'block';
+                } else if (this.value === 'mercadopago') {
+                    document.getElementById('mercadopago-container').style.display = 'block';
+                    initMercadoPago();
+                } else if (this.value === 'efectivo') {
+                    document.getElementById('datos-efectivo').style.display = 'block';
+                }
+            });
+        });
+
+        // Paso 1: Enviar formulario de cita
+        document.getElementById('citaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            citaData = {
+                veterinario_id: veterinarioId,
+                cliente_nombre: document.getElementById('cliente_nombre').value,
+                cliente_email: document.getElementById('cliente_email').value,
+                cliente_telefono: document.getElementById('cliente_telefono').value,
+                mascota_nombre: document.getElementById('mascota_nombre').value,
+                mascota_especie: document.getElementById('mascota_especie').value,
+                fecha_cita: document.getElementById('fecha_cita').value,
+                hora_cita: document.getElementById('hora_cita').value,
+                motivo: document.getElementById('motivo_consulta').value,
+                monto: configPagos.precio_consulta
+            };
+
+            // Ir al paso 2
+            document.getElementById('paso1').style.display = 'none';
+            document.getElementById('paso2').style.display = 'block';
+        });
+
+        function volverPaso1() {
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('paso1').style.display = 'block';
+        }
+
+        async function confirmarCita() {
+            const metodoPago = document.querySelector('input[name="metodo_pago"]:checked');
+            
+            if (!metodoPago) {
+                alert('Por favor selecciona un método de pago');
+                return;
+            }
+
+            citaData.metodo_pago = metodoPago.value;
+            citaData.pago_confirmado = metodoPago.value === 'efectivo' ? false : true;
+
+            try {
+                // Enviar cita al backend
+                const response = await fetch(`${API_URL}/api/citas/publica`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(citaData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Error al crear la cita');
+                }
+
+                const result = await response.json();
+                console.log('Cita creada:', result);
+                
+                mostrarConfirmacion();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al confirmar la cita: ' + error.message);
+            }
+        }
+
+        function mostrarConfirmacion() {
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('paso3').style.display = 'block';
+
+            const detalles = `
+                <strong>Detalles de tu cita:</strong><br>
+                <strong>Fecha:</strong> ${citaData.fecha_cita} a las ${citaData.hora_cita}<br>
+                <strong>Mascota:</strong> ${citaData.mascota_nombre} (${citaData.mascota_especie})<br>
+                <strong>Motivo:</strong> ${citaData.motivo}<br>
+                <strong>Monto:</strong> $${parseFloat(citaData.monto).toFixed(2)}<br>
+                <strong>Método de pago:</strong> ${citaData.metodo_pago}
+            `;
+            document.getElementById('detalles-cita').innerHTML = detalles;
+        }
+
+        function initMercadoPago() {
+            // Inicializar Mercado Pago (requiere public key)
+            if (configPagos.mercadopago_public_key) {
+                const mp = new MercadoPago(configPagos.mercadopago_public_key);
+                // Aquí iría la lógica de Mercado Pago
+                console.log('Mercado Pago inicializado');
+            }
+        }
+    </script>
+</body>
+</html>

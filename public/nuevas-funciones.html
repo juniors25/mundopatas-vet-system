@@ -76,14 +76,26 @@
         <div id="citas-section" class="content-section">
             <div class="row">
                 <div class="col-12">
-                    <h2><i class="fas fa-calendar-alt me-2"></i>Sistema de Citas</h2>
+                    <h2><i class="fas fa-calendar-alt me-2"></i>Sistema de Citas con Pago</h2>
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>✅ Módulo Activo:</strong> Gestiona citas médicas con calendario integrado. Sistema completamente funcional.
+                        <strong>✅ Módulo Activo:</strong> Sistema de citas con pago obligatorio. Los clientes deben pagar para confirmar su cita.
                     </div>
-                    <button class="btn btn-primary mb-3" onclick="showCitaModal()">
-                        <i class="fas fa-plus me-1"></i>Nueva Cita
-                    </button>
+                    <div class="alert alert-warning" id="config-pagos-alert" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Configuración requerida:</strong> Debes configurar tus métodos de pago antes de recibir citas.
+                        <a href="/config-pagos.html" class="btn btn-sm btn-warning ms-2">
+                            <i class="fas fa-cog me-1"></i>Configurar Pagos
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary me-2" onclick="showCitaModal()">
+                            <i class="fas fa-plus me-1"></i>Nueva Cita
+                        </button>
+                        <button class="btn btn-success" onclick="mostrarEnlacePublico()">
+                            <i class="fas fa-link me-1"></i>Obtener Enlace para Clientes
+                        </button>
+                    </div>
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <select class="form-select" id="filtro-estado-cita">
@@ -471,6 +483,51 @@
 
         function marcarTodasLeidas() {
             alert('Marcar notificaciones como leídas - Funcionalidad en desarrollo');
+        }
+
+        // Mostrar enlace público para que clientes agenden citas
+        function mostrarEnlacePublico() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const enlace = `${window.location.origin}/agendar-cita.html?vet=${user.id}`;
+            
+            const modal = `
+                <div class="modal fade" id="enlaceModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title">Enlace para Agendar Citas</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Comparte este enlace con tus clientes para que puedan agendar citas:</p>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="enlace-publico" value="${enlace}" readonly>
+                                    <button class="btn btn-primary" onclick="copiarEnlace()">
+                                        <i class="fas fa-copy"></i> Copiar
+                                    </button>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Los clientes podrán agendar citas y pagar según tus métodos configurados.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const oldModal = document.getElementById('enlaceModal');
+            if (oldModal) oldModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modal);
+            new bootstrap.Modal(document.getElementById('enlaceModal')).show();
+        }
+
+        function copiarEnlace() {
+            const input = document.getElementById('enlace-publico');
+            input.select();
+            document.execCommand('copy');
+            alert('✅ Enlace copiado al portapapeles');
         }
 
         // Verificar autenticación al cargar la página

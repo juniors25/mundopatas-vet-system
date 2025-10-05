@@ -5,12 +5,46 @@
 const API_URL = window.location.origin;
 let currentClientes = [];
 let currentMascotas = [];
+let configPagos = null;
 
 // ==================== FUNCIONES DE CITAS ====================
+
+// Verificar configuración de pagos
+async function verificarConfigPagos() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/veterinario/config-pagos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            configPagos = await response.json();
+            
+            // Verificar si tiene al menos un método configurado
+            const tieneMetodo = configPagos.acepta_transferencia || 
+                               configPagos.acepta_mercadopago || 
+                               configPagos.acepta_efectivo;
+            
+            const alert = document.getElementById('config-pagos-alert');
+            if (alert && !tieneMetodo) {
+                alert.style.display = 'block';
+            }
+            
+            return tieneMetodo;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error verificando configuración:', error);
+        return false;
+    }
+}
 
 // Cargar todas las citas
 async function loadCitas() {
     try {
+        // Verificar configuración de pagos
+        await verificarConfigPagos();
+        
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/api/citas`, {
             headers: {
