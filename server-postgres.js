@@ -1392,28 +1392,12 @@ app.get('/api/clientes-con-mascotas', authenticateToken, async (req, res) => {
 });
 
 // ENDPOINTS DE NOTIFICACIONES
-const { 
-    verificarAlimentoMascotas, 
-    calcularDiasRestantes,
-    obtenerConfiguracionNotificaciones,
-    actualizarConfiguracionNotificaciones
-} = require('./services/verificador-alimento');
-
-// Verificar alimento manualmente
-app.post('/api/notificaciones/verificar-alimento', authenticateToken, async (req, res) => {
-    try {
-        console.log('🔍 Verificación manual de alimento solicitada por:', req.user.email);
-        const resultado = await verificarAlimentoMascotas();
-        res.json(resultado);
-    } catch (error) {
-        console.error('Error en verificación manual:', error);
-        res.status(500).json({ error: 'Error al verificar alimento' });
-    }
-});
+// Nota: Las funciones se importan más abajo en la sección de notificaciones manuales
 
 // Obtener configuración de notificaciones
 app.get('/api/notificaciones/config', authenticateToken, async (req, res) => {
     try {
+        const { obtenerConfiguracionNotificaciones } = require('./services/verificador-alimento');
         const config = await obtenerConfiguracionNotificaciones(req.user.id);
         res.json(config);
     } catch (error) {
@@ -1425,6 +1409,7 @@ app.get('/api/notificaciones/config', authenticateToken, async (req, res) => {
 // Actualizar configuración de notificaciones
 app.post('/api/notificaciones/config', authenticateToken, async (req, res) => {
     try {
+        const { actualizarConfiguracionNotificaciones } = require('./services/verificador-alimento');
         const config = await actualizarConfiguracionNotificaciones(req.user.id, req.body);
         res.json({ message: 'Configuración actualizada exitosamente', config });
     } catch (error) {
