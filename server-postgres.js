@@ -1638,20 +1638,75 @@ app.get('/paciente', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'paciente.html'));
 });
 
+// ==================== ENDPOINTS DE NOTIFICACIONES MANUALES ====================
+
+// Importar funciones de verificación
+const { verificarAlimentoMascotas, verificarInventarioVeterinario } = require('./services/verificador-alimento');
+
+// Ejecutar verificación manual de alimento
+app.post('/api/notificaciones/verificar-alimento', authenticateToken, async (req, res) => {
+    try {
+        console.log('🔔 Verificación manual de alimento solicitada por:', req.user.email);
+        const resultado = await verificarAlimentoMascotas();
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error en verificación manual:', error);
+        res.status(500).json({ error: 'Error al verificar alimento' });
+    }
+});
+
+// Ejecutar verificación manual de inventario
+app.post('/api/notificaciones/verificar-inventario', authenticateToken, async (req, res) => {
+    try {
+        console.log('🔔 Verificación manual de inventario solicitada por:', req.user.email);
+        const resultado = await verificarInventarioVeterinario();
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error en verificación manual:', error);
+        res.status(500).json({ error: 'Error al verificar inventario' });
+    }
+});
+
+// Ejecutar todas las verificaciones
+app.post('/api/notificaciones/verificar-todo', authenticateToken, async (req, res) => {
+    try {
+        console.log('🔔 Verificación completa solicitada por:', req.user.email);
+        
+        const resultadoAlimento = await verificarAlimentoMascotas();
+        const resultadoInventario = await verificarInventarioVeterinario();
+        
+        res.json({
+            alimento: resultadoAlimento,
+            inventario: resultadoInventario
+        });
+    } catch (error) {
+        console.error('Error en verificación completa:', error);
+        res.status(500).json({ error: 'Error al ejecutar verificaciones' });
+    }
+});
+
 // ==================== BOT DE NOTIFICACIONES AUTOMÁTICO ====================
 
-// Configurar cron job para verificación automática de alimento (si está habilitado)
+// Configurar cron job para verificaciones automáticas (si está habilitado)
 if (CRON_ENABLED) {
     // Ejecutar todos los días a las 9:00 AM
     cron.schedule('0 9 * * *', async () => {
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
-        console.log('🤖 CRON: Ejecutando verificación automática de alimento');
+        console.log('🤖 CRON: Ejecutando verificaciones automáticas');
         console.log('═══════════════════════════════════════════════════════════');
         
         try {
-            const resultado = await verificarAlimentoMascotas();
-            console.log('✅ Verificación completada:', resultado);
+            // Verificar alimento de mascotas
+            console.log('📦 Verificando alimento de mascotas...');
+            const resultadoAlimento = await verificarAlimentoMascotas();
+            console.log('✅ Alimento verificado:', resultadoAlimento);
+            
+            // Verificar inventario de veterinarios
+            console.log('📊 Verificando inventario...');
+            const resultadoInventario = await verificarInventarioVeterinario();
+            console.log('✅ Inventario verificado:', resultadoInventario);
+            
         } catch (error) {
             console.error('❌ Error en verificación automática:', error);
         }
@@ -1663,6 +1718,8 @@ if (CRON_ENABLED) {
     });
     
     console.log('✅ Bot de notificaciones automático habilitado (9:00 AM diario)');
+    console.log('   - Verificación de alimento de mascotas');
+    console.log('   - Verificación de inventario (stock bajo y vencimientos)');
 } else {
     console.log('ℹ️  Bot automático deshabilitado. Usar Task Scheduler o ejecutar manualmente.');
 }

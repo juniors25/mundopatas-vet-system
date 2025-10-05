@@ -291,15 +291,30 @@
         <div id="notificaciones-section" class="content-section" style="display: none;">
             <div class="row">
                 <div class="col-12">
-                    <h2><i class="fas fa-bell me-2"></i>Centro de Notificaciones</h2>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-hard-hat me-2"></i>
-                        <strong>Módulo en Desarrollo:</strong> Notificaciones automáticas para vacunas, stock bajo y citas del día (Próximamente).
+                    <h2><i class="fas fa-bell me-2"></i>Centro de Notificaciones Automáticas</h2>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>✅ Bot Activo:</strong> Sistema de notificaciones automáticas funcionando. Se ejecuta diariamente a las 9:00 AM.
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>Notificaciones Automáticas:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>📦 Alimento de mascotas bajo (aviso a clientes)</li>
+                            <li>📊 Stock de inventario bajo (aviso a veterinario)</li>
+                            <li>📅 Productos por vencer (aviso a veterinario)</li>
+                        </ul>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <button class="btn btn-primary" onclick="marcarTodasLeidas()">
-                                <i class="fas fa-check-double me-1"></i>Marcar Todas como Leídas
+                        <div class="col-md-12">
+                            <button class="btn btn-success me-2" onclick="ejecutarVerificacionManual()">
+                                <i class="fas fa-play me-1"></i>Ejecutar Verificación Ahora
+                            </button>
+                            <button class="btn btn-primary me-2" onclick="verHistorialNotificaciones()">
+                                <i class="fas fa-history me-1"></i>Ver Historial
+                            </button>
+                            <button class="btn btn-info" onclick="configurarNotificaciones()">
+                                <i class="fas fa-cog me-1"></i>Configurar
                             </button>
                         </div>
                     </div>
@@ -503,6 +518,57 @@
 
         function marcarTodasLeidas() {
             alert('Marcar notificaciones como leídas - Funcionalidad en desarrollo');
+        }
+
+        // Ejecutar verificación manual de notificaciones
+        async function ejecutarVerificacionManual() {
+            if (!confirm('¿Ejecutar verificación de notificaciones ahora? Esto enviará alertas si hay productos con stock bajo o por vencer.')) {
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Verificando...';
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/notificaciones/verificar-todo`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Error al ejecutar verificación');
+
+                const resultado = await response.json();
+                
+                let mensaje = '✅ Verificación completada:\n\n';
+                mensaje += `📦 Alimento de mascotas:\n`;
+                mensaje += `   - ${resultado.alimento.mascotasVerificadas} mascotas verificadas\n`;
+                mensaje += `   - ${resultado.alimento.alertasGeneradas} alertas generadas\n`;
+                mensaje += `   - ${resultado.alimento.notificacionesEnviadas} notificaciones enviadas\n\n`;
+                mensaje += `📊 Inventario:\n`;
+                mensaje += `   - ${resultado.inventario.veterinariosVerificados} veterinarios verificados\n`;
+                mensaje += `   - ${resultado.inventario.alertasGeneradas} veterinarios notificados\n`;
+                mensaje += `   - ${resultado.inventario.notificacionesEnviadas} notificaciones enviadas`;
+
+                alert(mensaje);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al ejecutar verificación');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>Ejecutar Verificación Ahora';
+            }
+        }
+
+        function verHistorialNotificaciones() {
+            alert('Historial de notificaciones - Funcionalidad en desarrollo');
+        }
+
+        function configurarNotificaciones() {
+            alert('Configuración de notificaciones - Funcionalidad en desarrollo');
         }
 
         // Mostrar enlace público para que clientes agenden citas

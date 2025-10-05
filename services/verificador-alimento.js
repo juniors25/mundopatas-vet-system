@@ -336,8 +336,308 @@ async function actualizarConfiguracionNotificaciones(veterinarioId, config) {
     }
 }
 
+/**
+ * Verificar inventario y generar alertas para el veterinario
+ */
+async function verificarInventarioVeterinario() {
+    console.log('🔍 Iniciando verificación de inventario...');
+    
+    try {
+        // Obtener todos los veterinarios con productos en inventario
+        const veterinariosQuery = `
+            SELECT DISTINCT v.id, v.nombre_veterinaria, v.nombre_veterinario, 
+                   v.email, v.telefono,
+                   nc.email_habilitado, nc.whatsapp_habilitado, nc.telegram_habilitado,
+                   nc.email_notificaciones, nc.telefono_whatsapp, nc.telegram_chat_id
+            FROM veterinarios v
+            JOIN inventario_productos ip ON v.id = ip.veterinario_id
+            LEFT JOIN notificaciones_config nc ON v.id = nc.veterinario_id
+            WHERE ip.activo = true
+        `;
+        
+        const veterinariosResult = await db.query(veterinariosQuery);
+        const veterinarios = veterinariosResult.rows;
+        
+        console.log(`📊 Verificando inventario de ${veterinarios.length} veterinarios`);
+        
+        let alertasGeneradas = 0;
+        let notificacionesEnviadas = 0;
+        
+        for (const vet of veterinarios) {
+            // Obtener productos con stock bajo
+            const stockBajoQuery = `
+                SELECT * FROM inventario_productos 
+                WHERE veterinario_id = $1 
+                AND stock_actual <= stock_minimo 
+                AND activo = true
+                ORDER BY stock_actual ASC
+            `;
+            
+            const stockBajo = await db.query(stockBajoQuery, [vet.id]);
+            
+            // Obtener productos por vencer (próximos 30 días)
+            const porVencerQuery = `
+                SELECT * FROM inventario_productos 
+                WHERE veterinario_id = $1 
+                AND fecha_vencimiento IS NOT NULL
+                AND fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days'
+                AND fecha_vencimiento >= CURRENT_DATE
+                AND activo = true
+                ORDER BY fecha_vencimiento ASC
+            `;
+            
+            const porVencer = await db.query(porVencerQuery, [vet.id]);
+            
+            // Obtener productos vencidos
+            const vencidosQuery = `
+                SELECT * FROM inventario_productos 
+                WHERE veterinario_id = $1 
+                AND fecha_vencimiento IS NOT NULL
+                AND fecha_vencimiento < CURRENT_DATE
+                AND activo = true
+                ORDER BY fecha_vencimiento DESC
+            `;
+            
+            const vencidos = await db.query(vencidosQuery, [vet.id]);
+            
+            const totalAlertas = stockBajo.rows.length + porVencer.rows.length + vencidos.rows.length;
+            
+            if (totalAlertas > 0) {
+                console.log(`⚠️ ${vet.nombre_veterinaria}: ${totalAlertas} alertas de inventario`);
+                
+                // Verificar si ya se envió notificación hoy
+                const checkQuery = `
+                    SELECT id FROM notificaciones_enviadas 
+                    WHERE veterinario_id = $1 
+                        AND tipo_notificacion = 'inventario_alertas'
+                        AND fecha_procesado::date = CURRENT_DATE
+                    LIMIT 1
+                `;
+                
+                const checkResult = await db.query(checkQuery, [vet.id]);
+                
+                if (checkResult.rows.length === 0) {
+                    // Generar mensaje de alerta
+                    const mensaje = generarMensajeInventario(
+                        vet,
+                        stockBajo.rows,
+                        porVencer.rows,
+                        vencidos.rows
+                    );
+                    
+                    // Enviar por email si está habilitado
+                    if (vet.email_habilitado !== false && (vet.email_notificaciones || vet.email)) {
+                        const destinatario = vet.email_notificaciones || vet.email;
+                        const resultEmail = await enviarEmail(
+                            destinatario,
+                            mensaje.asunto,
+                            mensaje.texto,
+                            mensaje.html
+                        );
+                        
+                        await registrarNotificacionEnviada(
+                            vet.id,
+                            null,
+                            null,
+                            'inventario_alertas',
+                            'email',
+                            destinatario,
+                            mensaje.asunto,
+                            mensaje.texto,
+                            resultEmail.success ? 'enviado' : 'error',
+                            resultEmail.error || null
+                        );
+                        
+                        if (resultEmail.success) notificacionesEnviadas++;
+                    }
+                    
+                    // Enviar por WhatsApp si está habilitado
+                    if (vet.whatsapp_habilitado && (vet.telefono_whatsapp || vet.telefono)) {
+                        const telefono = vet.telefono_whatsapp || vet.telefono;
+                        const resultWhatsApp = await enviarWhatsApp(
+                            telefono,
+                            mensaje.texto
+                        );
+                        
+                        await registrarNotificacionEnviada(
+                            vet.id,
+                            null,
+                            null,
+                            'inventario_alertas',
+                            'whatsapp',
+                            telefono,
+                            null,
+                            mensaje.texto,
+                            resultWhatsApp.success ? 'enviado' : 'error',
+                            resultWhatsApp.error || null
+                        );
+                        
+                        if (resultWhatsApp.success) notificacionesEnviadas++;
+                    }
+                    
+                    // Enviar por Telegram si está habilitado
+                    if (vet.telegram_habilitado && vet.telegram_chat_id) {
+                        const resultTelegram = await enviarTelegram(
+                            vet.telegram_chat_id,
+                            mensaje.texto
+                        );
+                        
+                        await registrarNotificacionEnviada(
+                            vet.id,
+                            null,
+                            null,
+                            'inventario_alertas',
+                            'telegram',
+                            vet.telegram_chat_id,
+                            null,
+                            mensaje.texto,
+                            resultTelegram.success ? 'enviado' : 'error',
+                            resultTelegram.error || null
+                        );
+                        
+                        if (resultTelegram.success) notificacionesEnviadas++;
+                    }
+                    
+                    alertasGeneradas++;
+                }
+            }
+        }
+        
+        console.log(`✅ Verificación de inventario completada: ${alertasGeneradas} veterinarios notificados, ${notificacionesEnviadas} notificaciones enviadas`);
+        
+        return {
+            success: true,
+            veterinariosVerificados: veterinarios.length,
+            alertasGeneradas,
+            notificacionesEnviadas
+        };
+        
+    } catch (error) {
+        console.error('❌ Error verificando inventario:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Generar mensaje de alerta de inventario
+ */
+function generarMensajeInventario(veterinario, stockBajo, porVencer, vencidos) {
+    const asunto = `⚠️ Alertas de Inventario - ${veterinario.nombre_veterinaria}`;
+    
+    let texto = `Hola ${veterinario.nombre_veterinario},\n\n`;
+    texto += `Te informamos sobre el estado de tu inventario:\n\n`;
+    
+    if (stockBajo.length > 0) {
+        texto += `🔴 PRODUCTOS CON STOCK BAJO (${stockBajo.length}):\n`;
+        stockBajo.slice(0, 5).forEach(p => {
+            texto += `   • ${p.nombre} - Stock: ${p.stock_actual} (Mínimo: ${p.stock_minimo})\n`;
+        });
+        if (stockBajo.length > 5) {
+            texto += `   ... y ${stockBajo.length - 5} productos más\n`;
+        }
+        texto += `\n`;
+    }
+    
+    if (vencidos.length > 0) {
+        texto += `⚫ PRODUCTOS VENCIDOS (${vencidos.length}):\n`;
+        vencidos.slice(0, 5).forEach(p => {
+            const diasVencido = Math.floor((new Date() - new Date(p.fecha_vencimiento)) / (1000 * 60 * 60 * 24));
+            texto += `   • ${p.nombre} - Vencido hace ${diasVencido} días\n`;
+        });
+        if (vencidos.length > 5) {
+            texto += `   ... y ${vencidos.length - 5} productos más\n`;
+        }
+        texto += `\n`;
+    }
+    
+    if (porVencer.length > 0) {
+        texto += `🟡 PRODUCTOS POR VENCER (${porVencer.length}):\n`;
+        porVencer.slice(0, 5).forEach(p => {
+            const diasRestantes = Math.floor((new Date(p.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24));
+            texto += `   • ${p.nombre} - Vence en ${diasRestantes} días\n`;
+        });
+        if (porVencer.length > 5) {
+            texto += `   ... y ${porVencer.length - 5} productos más\n`;
+        }
+        texto += `\n`;
+    }
+    
+    texto += `\nIngresa al sistema para ver el detalle completo y tomar acción.\n\n`;
+    texto += `Saludos,\nSistema MUNDO PATAS`;
+    
+    // Versión HTML
+    let html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc3545;">⚠️ Alertas de Inventario</h2>
+            <p>Hola <strong>${veterinario.nombre_veterinario}</strong>,</p>
+            <p>Te informamos sobre el estado de tu inventario:</p>
+    `;
+    
+    if (stockBajo.length > 0) {
+        html += `
+            <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0;">
+                <h3 style="color: #721c24; margin-top: 0;">🔴 Stock Bajo (${stockBajo.length})</h3>
+                <ul>
+        `;
+        stockBajo.slice(0, 5).forEach(p => {
+            html += `<li><strong>${p.nombre}</strong> - Stock: ${p.stock_actual} (Mínimo: ${p.stock_minimo})</li>`;
+        });
+        if (stockBajo.length > 5) {
+            html += `<li><em>... y ${stockBajo.length - 5} productos más</em></li>`;
+        }
+        html += `</ul></div>`;
+    }
+    
+    if (vencidos.length > 0) {
+        html += `
+            <div style="background-color: #d6d8d9; border-left: 4px solid #6c757d; padding: 15px; margin: 15px 0;">
+                <h3 style="color: #383d41; margin-top: 0;">⚫ Productos Vencidos (${vencidos.length})</h3>
+                <ul>
+        `;
+        vencidos.slice(0, 5).forEach(p => {
+            const diasVencido = Math.floor((new Date() - new Date(p.fecha_vencimiento)) / (1000 * 60 * 60 * 24));
+            html += `<li><strong>${p.nombre}</strong> - Vencido hace ${diasVencido} días</li>`;
+        });
+        if (vencidos.length > 5) {
+            html += `<li><em>... y ${vencidos.length - 5} productos más</em></li>`;
+        }
+        html += `</ul></div>`;
+    }
+    
+    if (porVencer.length > 0) {
+        html += `
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0;">
+                <h3 style="color: #856404; margin-top: 0;">🟡 Por Vencer (${porVencer.length})</h3>
+                <ul>
+        `;
+        porVencer.slice(0, 5).forEach(p => {
+            const diasRestantes = Math.floor((new Date(p.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24));
+            html += `<li><strong>${p.nombre}</strong> - Vence en ${diasRestantes} días</li>`;
+        });
+        if (porVencer.length > 5) {
+            html += `<li><em>... y ${porVencer.length - 5} productos más</em></li>`;
+        }
+        html += `</ul></div>`;
+    }
+    
+    html += `
+            <p>Ingresa al sistema para ver el detalle completo y tomar acción.</p>
+            <p style="color: #6c757d; font-size: 12px; margin-top: 30px;">
+                Saludos,<br>
+                <strong>Sistema MUNDO PATAS</strong>
+            </p>
+        </div>
+    `;
+    
+    return { asunto, texto, html };
+}
+
 module.exports = {
     verificarAlimentoMascotas,
+    verificarInventarioVeterinario,
     calcularDiasRestantes,
     obtenerConfiguracionNotificaciones,
     actualizarConfiguracionNotificaciones,
