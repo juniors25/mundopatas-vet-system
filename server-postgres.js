@@ -981,6 +981,229 @@ app.get('/api/facturas/stats/resumen', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== ENDPOINTS DE INVENTARIO ====================
+
+// Obtener todos los productos del inventario
+app.get('/api/inventario/productos', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM inventario_productos WHERE veterinario_id = $1 ORDER BY nombre ASC',
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo productos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Agregar producto al inventario
+app.post('/api/inventario/productos', authenticateToken, async (req, res) => {
+    const {
+        codigo_barras, nombre, descripcion, categoria, tipo, marca, presentacion,
+        stock_actual, stock_minimo, stock_maximo, precio_compra, precio_venta,
+        fecha_vencimiento, lote, proveedor, ubicacion, imagen_url
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO inventario_productos (
+                veterinario_id, codigo_barras, nombre, descripcion, categoria, tipo,
+                marca, presentacion, stock_actual, stock_minimo, stock_maximo,
+                precio_compra, precio_venta, fecha_vencimiento, lote, proveedor,
+                ubicacion, imagen_url
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            RETURNING *
+        `, [
+            req.user.id, codigo_barras, nombre, descripcion, categoria, tipo,
+            marca, presentacion, stock_actual, stock_minimo, stock_maximo,
+            precio_compra, precio_venta, fecha_vencimiento, lote, proveedor,
+            ubicacion, imagen_url
+        ]);
+
+        // Registrar movimiento inicial
+        await pool.query(`
+            INSERT INTO movimientos_inventario (
+                producto_id, veterinario_id, tipo_movimiento, cantidad, motivo,
+                stock_anterior, stock_nuevo
+            ) VALUES ($1, $2, 'entrada', $3, 'Stock inicial', 0, $3)
+        `, [result.rows[0].id, req.user.id, stock_actual]);
+
+        res.json({ message: 'Producto agregado exitosamente', producto: result.rows[0] });
+    } catch (error) {
+        console.error('Error agregando producto:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar producto
+app.put('/api/inventario/productos/:id', authenticateToken, async (req, res) => {
+    const {
+        codigo_barras, nombre, descripcion, categoria, tipo, marca, presentacion,
+        stock_minimo, stock_maximo, precio_compra, precio_venta,
+        fecha_vencimiento, lote, proveedor, ubicacion, imagen_url, activo
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE inventario_productos SET
+                codigo_barras = $1, nombre = $2, descripcion = $3, categoria = $4,
+                tipo = $5, marca = $6, presentacion = $7, stock_minimo = $8,
+                stock_maximo = $9, precio_compra = $10, precio_venta = $11,
+                fecha_vencimiento = $12, lote = $13, proveedor = $14, ubicacion = $15,
+                imagen_url = $16, activo = $17, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $18 AND veterinario_id = $19
+            RETURNING *
+        `, [
+            codigo_barras, nombre, descripcion, categoria, tipo, marca, presentacion,
+            stock_minimo, stock_maximo, precio_compra, precio_venta,
+            fecha_vencimiento, lote, proveedor, ubicacion, imagen_url, activo,
+            req.params.id, req.user.id
+        ]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        res.json({ message: 'Producto actualizado exitosamente', producto: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando producto:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Ajustar stock de producto
+app.post('/api/inventario/productos/:id/ajustar-stock', authenticateToken, async (req, res) => {
+    const { cantidad, tipo_movimiento, motivo } = req.body;
+
+    try {
+        // Obtener stock actual
+        const productoResult = await pool.query(
+            'SELECT stock_actual FROM inventario_productos WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+
+        if (productoResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        const stockAnterior = productoResult.rows[0].stock_actual;
+        let stockNuevo = stockAnterior;
+
+        // Calcular nuevo stock
+        if (tipo_movimiento === 'entrada') {
+            stockNuevo = stockAnterior + cantidad;
+        } else if (tipo_movimiento === 'salida') {
+            stockNuevo = stockAnterior - cantidad;
+            if (stockNuevo < 0) {
+                return res.status(400).json({ error: 'Stock insuficiente' });
+            }
+        }
+
+        // Actualizar stock
+        await pool.query(
+            'UPDATE inventario_productos SET stock_actual = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [stockNuevo, req.params.id]
+        );
+
+        // Registrar movimiento
+        await pool.query(`
+            INSERT INTO movimientos_inventario (
+                producto_id, veterinario_id, tipo_movimiento, cantidad, motivo,
+                stock_anterior, stock_nuevo
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [req.params.id, req.user.id, tipo_movimiento, cantidad, motivo, stockAnterior, stockNuevo]);
+
+        res.json({ 
+            message: 'Stock ajustado exitosamente',
+            stock_anterior: stockAnterior,
+            stock_nuevo: stockNuevo
+        });
+    } catch (error) {
+        console.error('Error ajustando stock:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener movimientos de inventario
+app.get('/api/inventario/movimientos', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT m.*, p.nombre as producto_nombre, p.codigo_barras
+            FROM movimientos_inventario m
+            JOIN inventario_productos p ON m.producto_id = p.id
+            WHERE m.veterinario_id = $1
+            ORDER BY m.fecha_movimiento DESC
+            LIMIT 100
+        `, [req.user.id]);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo movimientos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener alertas de stock bajo y productos por vencer
+app.get('/api/inventario/alertas', authenticateToken, async (req, res) => {
+    try {
+        const stockBajo = await pool.query(`
+            SELECT * FROM inventario_productos 
+            WHERE veterinario_id = $1 
+            AND stock_actual <= stock_minimo 
+            AND activo = true
+            ORDER BY stock_actual ASC
+        `, [req.user.id]);
+
+        const porVencer = await pool.query(`
+            SELECT * FROM inventario_productos 
+            WHERE veterinario_id = $1 
+            AND fecha_vencimiento IS NOT NULL
+            AND fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days'
+            AND fecha_vencimiento >= CURRENT_DATE
+            AND activo = true
+            ORDER BY fecha_vencimiento ASC
+        `, [req.user.id]);
+
+        const vencidos = await pool.query(`
+            SELECT * FROM inventario_productos 
+            WHERE veterinario_id = $1 
+            AND fecha_vencimiento IS NOT NULL
+            AND fecha_vencimiento < CURRENT_DATE
+            AND activo = true
+            ORDER BY fecha_vencimiento DESC
+        `, [req.user.id]);
+
+        res.json({
+            stock_bajo: stockBajo.rows,
+            por_vencer: porVencer.rows,
+            vencidos: vencidos.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo alertas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Buscar producto por código de barras
+app.get('/api/inventario/buscar/:codigo', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM inventario_productos WHERE codigo_barras = $1 AND veterinario_id = $2',
+            [req.params.codigo, req.user.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error buscando producto:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // RUTA DE INFORME COMPLETO
 app.get('/api/informe/:mascotaId', authenticateToken, async (req, res) => {
     const mascotaId = req.params.mascotaId;

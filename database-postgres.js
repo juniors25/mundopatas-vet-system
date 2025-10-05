@@ -395,29 +395,67 @@ async function initializeDatabase() {
         `);
 
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS inventario_medicamentos (
+            CREATE TABLE IF NOT EXISTS inventario_productos (
                 id SERIAL PRIMARY KEY,
                 veterinario_id INTEGER REFERENCES veterinarios(id),
+                codigo_barras TEXT,
                 nombre TEXT NOT NULL,
                 descripcion TEXT,
-                categoria TEXT,
+                categoria TEXT NOT NULL,
+                tipo TEXT NOT NULL,
+                marca TEXT,
+                presentacion TEXT,
                 stock_actual INTEGER NOT NULL DEFAULT 0,
                 stock_minimo INTEGER DEFAULT 10,
+                stock_maximo INTEGER DEFAULT 100,
                 precio_compra DECIMAL(10,2),
                 precio_venta DECIMAL(10,2),
                 fecha_vencimiento DATE,
+                lote TEXT,
                 proveedor TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ubicacion TEXT,
+                imagen_url TEXT,
+                activo BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Migración de tabla antigua a nueva
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='inventario_medicamentos') THEN
+                    INSERT INTO inventario_productos (
+                        veterinario_id, nombre, descripcion, categoria, tipo,
+                        stock_actual, stock_minimo, precio_compra, precio_venta,
+                        fecha_vencimiento, proveedor, created_at
+                    )
+                    SELECT 
+                        veterinario_id, nombre, descripcion, categoria, 'medicamento',
+                        stock_actual, stock_minimo, precio_compra, precio_venta,
+                        fecha_vencimiento, proveedor, created_at
+                    FROM inventario_medicamentos
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM inventario_productos 
+                        WHERE inventario_productos.nombre = inventario_medicamentos.nombre
+                        AND inventario_productos.veterinario_id = inventario_medicamentos.veterinario_id
+                    );
+                END IF;
+            END $$;
         `);
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS movimientos_inventario (
                 id SERIAL PRIMARY KEY,
-                medicamento_id INTEGER REFERENCES inventario_medicamentos(id),
+                producto_id INTEGER REFERENCES inventario_productos(id),
+                veterinario_id INTEGER REFERENCES veterinarios(id),
                 tipo_movimiento TEXT NOT NULL,
                 cantidad INTEGER NOT NULL,
                 motivo TEXT,
+                usuario TEXT,
+                stock_anterior INTEGER,
+                stock_nuevo INTEGER,
                 fecha_movimiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
