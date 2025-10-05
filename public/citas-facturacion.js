@@ -848,6 +848,347 @@ function printFactura(facturaId) {
     window.open(`${API_URL}/api/facturas/${facturaId}/print`, '_blank');
 }
 
+// ==================== FUNCIONES DE INTEGRACIÓN ARCA ====================
+
+// Mostrar modal para registrar factura desde ARCA
+async function showFacturaARCAModal() {
+    await loadClientesYMascotas();
+
+    const modalHTML = `
+        <div class="modal fade" id="facturaARCAModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Registrar Factura desde ARCA</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Ingresa los datos de la factura generada en ARCA/AFIP
+                        </div>
+                        <form id="facturaARCAForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Cliente *</label>
+                                    <select class="form-select" id="arca-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                        ${currentClientes.map(c => `
+                                            <option value="${c.id}">${c.nombre} ${c.apellido}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Fecha</label>
+                                    <input type="date" class="form-control" id="arca-fecha" 
+                                           value="${new Date().toISOString().split('T')[0]}" required>
+                                </div>
+                            </div>
+                            
+                            <h6 class="mt-3">Datos de ARCA/AFIP</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">CAE *</label>
+                                    <input type="text" class="form-control" id="arca-cae" required
+                                           placeholder="12345678901234">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Vencimiento CAE *</label>
+                                    <input type="date" class="form-control" id="arca-cae-venc" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Tipo Comprobante *</label>
+                                    <select class="form-select" id="arca-tipo" required>
+                                        <option value="Factura A">Factura A</option>
+                                        <option value="Factura B">Factura B</option>
+                                        <option value="Factura C">Factura C</option>
+                                        <option value="Factura E">Factura E</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">N° Comprobante *</label>
+                                    <input type="number" class="form-control" id="arca-numero" required
+                                           placeholder="00001234">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">N° Factura *</label>
+                                    <input type="text" class="form-control" id="arca-num-factura" required
+                                           placeholder="0001-00001234">
+                                </div>
+                            </div>
+                            
+                            <h6 class="mt-3">Items de la factura</h6>
+                            <div id="arca-items">
+                                <div class="row arca-item mb-2">
+                                    <div class="col-md-5">
+                                        <input type="text" class="form-control" placeholder="Descripción" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" class="form-control item-cantidad" placeholder="Cant." min="1" value="1" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" class="form-control item-precio" placeholder="Precio" min="0" step="0.01" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control item-subtotal" placeholder="Subtotal" readonly>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeARCAItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-sm btn-secondary mb-3" onclick="addARCAItem()">
+                                <i class="fas fa-plus me-1"></i>Agregar item
+                            </button>
+                            
+                            <div class="row">
+                                <div class="col-md-8"></div>
+                                <div class="col-md-4">
+                                    <div class="mb-2">
+                                        <strong>Subtotal:</strong> 
+                                        <span id="arca-subtotal-display" class="float-end">$0.00</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label>IVA (%):</label>
+                                        <input type="number" class="form-control form-control-sm" id="arca-iva" 
+                                               min="0" max="100" step="0.01" value="21" onchange="calcularTotalARCA()">
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>IVA:</strong> 
+                                        <span id="arca-iva-display" class="float-end">$0.00</span>
+                                    </div>
+                                    <hr>
+                                    <div>
+                                        <h5>Total: <span id="arca-total-display" class="float-end">$0.00</span></h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="saveFacturaARCA()">
+                            <i class="fas fa-save me-1"></i>Registrar Factura
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const oldModal = document.getElementById('facturaARCAModal');
+    if (oldModal) oldModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById('facturaARCAModal'));
+    modal.show();
+
+    // Agregar event listeners
+    document.querySelectorAll('.item-cantidad, .item-precio').forEach(input => {
+        input.addEventListener('input', calcularTotalARCA);
+    });
+}
+
+function addARCAItem() {
+    const itemsContainer = document.getElementById('arca-items');
+    const newItem = `
+        <div class="row arca-item mb-2">
+            <div class="col-md-5">
+                <input type="text" class="form-control" placeholder="Descripción" required>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control item-cantidad" placeholder="Cant." min="1" value="1" required>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control item-precio" placeholder="Precio" min="0" step="0.01" required>
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control item-subtotal" placeholder="Subtotal" readonly>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeARCAItem(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    itemsContainer.insertAdjacentHTML('beforeend', newItem);
+    
+    const lastItem = itemsContainer.lastElementChild;
+    lastItem.querySelectorAll('.item-cantidad, .item-precio').forEach(input => {
+        input.addEventListener('input', calcularTotalARCA);
+    });
+}
+
+function removeARCAItem(button) {
+    const items = document.querySelectorAll('.arca-item');
+    if (items.length > 1) {
+        button.closest('.arca-item').remove();
+        calcularTotalARCA();
+    } else {
+        showNotification('Debe haber al menos un item', 'warning');
+    }
+}
+
+function calcularTotalARCA() {
+    let subtotal = 0;
+    
+    document.querySelectorAll('.arca-item').forEach(item => {
+        const cantidad = parseFloat(item.querySelector('.item-cantidad').value) || 0;
+        const precio = parseFloat(item.querySelector('.item-precio').value) || 0;
+        const itemSubtotal = cantidad * precio;
+        
+        item.querySelector('.item-subtotal').value = itemSubtotal.toFixed(2);
+        subtotal += itemSubtotal;
+    });
+    
+    const ivaPorcentaje = parseFloat(document.getElementById('arca-iva').value) || 0;
+    const iva = subtotal * (ivaPorcentaje / 100);
+    const total = subtotal + iva;
+    
+    document.getElementById('arca-subtotal-display').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('arca-iva-display').textContent = `$${iva.toFixed(2)}`;
+    document.getElementById('arca-total-display').textContent = `$${total.toFixed(2)}`;
+}
+
+async function saveFacturaARCA() {
+    const form = document.getElementById('facturaARCAForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const items = [];
+    document.querySelectorAll('.arca-item').forEach(item => {
+        const descripcion = item.querySelector('input[placeholder="Descripción"]').value;
+        const cantidad = parseInt(item.querySelector('.item-cantidad').value);
+        const precio_unitario = parseFloat(item.querySelector('.item-precio').value);
+        const subtotal = cantidad * precio_unitario;
+        
+        items.push({ descripcion, cantidad, precio_unitario, subtotal });
+    });
+
+    if (items.length === 0) {
+        showNotification('Debe agregar al menos un item', 'warning');
+        return;
+    }
+
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const ivaPorcentaje = parseFloat(document.getElementById('arca-iva').value) || 0;
+    const impuestos = subtotal * (ivaPorcentaje / 100);
+    const total = subtotal + impuestos;
+
+    const data = {
+        cliente_id: parseInt(document.getElementById('arca-cliente').value),
+        numero_factura: document.getElementById('arca-num-factura').value,
+        fecha_factura: document.getElementById('arca-fecha').value,
+        items: items,
+        subtotal: subtotal,
+        impuestos: impuestos,
+        total: total,
+        cae: document.getElementById('arca-cae').value,
+        cae_vencimiento: document.getElementById('arca-cae-venc').value,
+        tipo_comprobante: document.getElementById('arca-tipo').value,
+        numero_comprobante: parseInt(document.getElementById('arca-numero').value)
+    };
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/facturas/desde-arca`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) throw new Error('Error al registrar factura');
+
+        showNotification('Factura ARCA registrada exitosamente', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('facturaARCAModal')).hide();
+        loadFacturas();
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al registrar factura ARCA', 'error');
+    }
+}
+
+async function verFacturasARCA() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/facturas/arca/sincronizadas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar facturas ARCA');
+
+        const facturas = await response.json();
+        
+        if (facturas.length === 0) {
+            showNotification('No hay facturas sincronizadas con ARCA', 'info');
+            return;
+        }
+
+        // Mostrar modal con facturas ARCA
+        const facturasHTML = facturas.map(f => `
+            <tr>
+                <td><strong>${f.numero_factura}</strong></td>
+                <td>${new Date(f.fecha_factura).toLocaleDateString('es-AR')}</td>
+                <td>${f.cliente_nombre} ${f.cliente_apellido}</td>
+                <td>$${parseFloat(f.total).toFixed(2)}</td>
+                <td><span class="badge bg-success">ARCA</span></td>
+                <td>${f.arca_cae}</td>
+            </tr>
+        `).join('');
+
+        const modalHTML = `
+            <div class="modal fade" id="facturasARCAModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">Facturas Sincronizadas con ARCA</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>N° Factura</th>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                        <th>CAE</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${facturasHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const oldModal = document.getElementById('facturasARCAModal');
+        if (oldModal) oldModal.remove();
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        new bootstrap.Modal(document.getElementById('facturasARCAModal')).show();
+
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al cargar facturas ARCA', 'error');
+    }
+}
+
 // ==================== FUNCIONES AUXILIARES ====================
 
 // Mostrar notificación

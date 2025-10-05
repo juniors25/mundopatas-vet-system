@@ -143,6 +143,38 @@
                                 </div>
                             </div>
 
+                            <!-- Integración ARCA/AFIP -->
+                            <div class="card mb-4 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Integración con ARCA (AFIP)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Configura tu CUIT y credenciales de ARCA para sincronizar facturas electrónicas.
+                                        Las facturas generadas en ARCA se listarán automáticamente en el sistema.
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">CUIT</label>
+                                        <input type="text" class="form-control" id="arca_cuit" 
+                                               placeholder="20-12345678-9" maxlength="13">
+                                        <small class="text-muted">Tu CUIT registrado en AFIP</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Key de ARCA</label>
+                                        <input type="password" class="form-control" id="arca_api_key" 
+                                               placeholder="Tu clave de API de ARCA">
+                                        <small class="text-muted">Obtén tu API Key desde el portal de ARCA</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Punto de Venta</label>
+                                        <input type="number" class="form-control" id="arca_punto_venta" 
+                                               min="1" value="1">
+                                        <small class="text-muted">Número de punto de venta configurado en AFIP</small>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="fas fa-save me-2"></i>Guardar Configuración
@@ -193,6 +225,9 @@
                     document.getElementById('acepta_transferencia').checked = config.acepta_transferencia;
                     document.getElementById('acepta_mercadopago').checked = config.acepta_mercadopago;
                     document.getElementById('acepta_efectivo').checked = config.acepta_efectivo;
+                    
+                    document.getElementById('arca_cuit').value = config.arca_cuit || '';
+                    document.getElementById('arca_punto_venta').value = config.arca_punto_venta || 1;
 
                     toggleSections();
                 }
@@ -230,7 +265,10 @@
                 mercadopago_access_token: document.getElementById('mercadopago_access_token').value,
                 acepta_transferencia: document.getElementById('acepta_transferencia').checked,
                 acepta_mercadopago: document.getElementById('acepta_mercadopago').checked,
-                acepta_efectivo: document.getElementById('acepta_efectivo').checked
+                acepta_efectivo: document.getElementById('acepta_efectivo').checked,
+                arca_cuit: document.getElementById('arca_cuit').value,
+                arca_api_key: document.getElementById('arca_api_key').value,
+                arca_punto_venta: parseInt(document.getElementById('arca_punto_venta').value)
             };
 
             // Validar que al menos un método esté habilitado

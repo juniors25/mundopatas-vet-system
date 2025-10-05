@@ -97,6 +97,17 @@ async function initializeDatabase() {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='acepta_efectivo') THEN
                     ALTER TABLE veterinarios ADD COLUMN acepta_efectivo BOOLEAN DEFAULT true;
                 END IF;
+                
+                -- Columnas para integración con ARCA/AFIP
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='arca_cuit') THEN
+                    ALTER TABLE veterinarios ADD COLUMN arca_cuit TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='arca_api_key') THEN
+                    ALTER TABLE veterinarios ADD COLUMN arca_api_key TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='arca_punto_venta') THEN
+                    ALTER TABLE veterinarios ADD COLUMN arca_punto_venta INTEGER DEFAULT 1;
+                END IF;
             END $$;
         `);
 
@@ -324,8 +335,40 @@ async function initializeDatabase() {
                 impuestos DECIMAL(10,2) DEFAULT 0,
                 total DECIMAL(10,2) NOT NULL,
                 estado TEXT DEFAULT 'pendiente',
+                -- Campos de integración con ARCA/AFIP
+                arca_cae TEXT,
+                arca_cae_vencimiento DATE,
+                arca_tipo_comprobante TEXT,
+                arca_punto_venta INTEGER,
+                arca_numero_comprobante BIGINT,
+                arca_sincronizada BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Agregar columnas ARCA si no existen
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_cae') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_cae TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_cae_vencimiento') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_cae_vencimiento DATE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_tipo_comprobante') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_tipo_comprobante TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_punto_venta') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_punto_venta INTEGER;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_numero_comprobante') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_numero_comprobante BIGINT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='facturas' AND column_name='arca_sincronizada') THEN
+                    ALTER TABLE facturas ADD COLUMN arca_sincronizada BOOLEAN DEFAULT false;
+                END IF;
+            END $$;
         `);
 
         await pool.query(`

@@ -828,6 +828,136 @@ app.delete('/api/facturas/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== INTEGRACIÓN CON ARCA/AFIP ====================
+
+// Sincronizar factura con ARCA
+app.post('/api/facturas/:id/sincronizar-arca', authenticateToken, async (req, res) => {
+    const { cae, cae_vencimiento, tipo_comprobante, numero_comprobante } = req.body;
+    
+    try {
+        // Verificar permisos
+        const facturaCheck = await pool.query(
+            'SELECT id FROM facturas WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (facturaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Factura no encontrada' });
+        }
+
+        // Obtener configuración ARCA del veterinario
+        const vetConfig = await pool.query(
+            'SELECT arca_punto_venta FROM veterinarios WHERE id = $1',
+            [req.user.id]
+        );
+
+        const result = await pool.query(
+            `UPDATE facturas SET 
+                arca_cae = $1,
+                arca_cae_vencimiento = $2,
+                arca_tipo_comprobante = $3,
+                arca_punto_venta = $4,
+                arca_numero_comprobante = $5,
+                arca_sincronizada = true
+             WHERE id = $6 RETURNING *`,
+            [cae, cae_vencimiento, tipo_comprobante, vetConfig.rows[0].arca_punto_venta, numero_comprobante, req.params.id]
+        );
+
+        res.json({ 
+            message: 'Factura sincronizada con ARCA exitosamente', 
+            factura: result.rows[0] 
+        });
+    } catch (error) {
+        console.error('Error sincronizando con ARCA:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Registrar factura manual desde ARCA
+app.post('/api/facturas/desde-arca', authenticateToken, async (req, res) => {
+    const { 
+        cliente_id, numero_factura, fecha_factura, items, 
+        subtotal, impuestos, total,
+        cae, cae_vencimiento, tipo_comprobante, numero_comprobante
+    } = req.body;
+    
+    try {
+        // Verificar que el cliente pertenece al veterinario
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [cliente_id, req.user.id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Cliente no encontrado' });
+        }
+
+        // Obtener configuración ARCA
+        const vetConfig = await pool.query(
+            'SELECT arca_punto_venta FROM veterinarios WHERE id = $1',
+            [req.user.id]
+        );
+
+        // Insertar factura con datos de ARCA
+        const facturaResult = await pool.query(
+            `INSERT INTO facturas (
+                veterinario_id, cliente_id, numero_factura, fecha_factura, 
+                subtotal, impuestos, total, estado,
+                arca_cae, arca_cae_vencimiento, arca_tipo_comprobante,
+                arca_punto_venta, arca_numero_comprobante, arca_sincronizada
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pagada', $8, $9, $10, $11, $12, true) 
+            RETURNING *`,
+            [
+                req.user.id, cliente_id, numero_factura, fecha_factura || new Date(),
+                subtotal, impuestos || 0, total,
+                cae, cae_vencimiento, tipo_comprobante,
+                vetConfig.rows[0].arca_punto_venta, numero_comprobante
+            ]
+        );
+
+        const factura = facturaResult.rows[0];
+
+        // Insertar items de la factura
+        for (const item of items) {
+            await pool.query(
+                `INSERT INTO factura_items (factura_id, descripcion, cantidad, precio_unitario, subtotal)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [factura.id, item.descripcion, item.cantidad, item.precio_unitario, item.subtotal]
+            );
+        }
+
+        res.json({ 
+            message: 'Factura registrada desde ARCA exitosamente', 
+            factura 
+        });
+    } catch (error) {
+        console.error('Error registrando factura desde ARCA:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener facturas sincronizadas con ARCA
+app.get('/api/facturas/arca/sincronizadas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT f.*, 
+                    c.nombre as cliente_nombre, 
+                    c.apellido as cliente_apellido,
+                    c.email as cliente_email
+             FROM facturas f
+             JOIN clientes c ON f.cliente_id = c.id
+             WHERE f.veterinario_id = $1 AND f.arca_sincronizada = true
+             ORDER BY f.fecha_factura DESC, f.created_at DESC`,
+            [req.user.id]
+        );
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo facturas ARCA:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Obtener estadísticas de facturación
 app.get('/api/facturas/stats/resumen', authenticateToken, async (req, res) => {
     try {
@@ -1198,7 +1328,7 @@ app.get('/api/veterinario/config-pagos', authenticateToken, async (req, res) => 
     }
 });
 
-// Actualizar configuración de pagos
+// Actualizar configuración de pagos y ARCA
 app.put('/api/veterinario/config-pagos', authenticateToken, async (req, res) => {
     const {
         cbu_cvu,
@@ -1209,7 +1339,10 @@ app.put('/api/veterinario/config-pagos', authenticateToken, async (req, res) => 
         precio_consulta,
         acepta_mercadopago,
         acepta_transferencia,
-        acepta_efectivo
+        acepta_efectivo,
+        arca_cuit,
+        arca_api_key,
+        arca_punto_venta
     } = req.body;
     
     try {
@@ -1223,14 +1356,19 @@ app.put('/api/veterinario/config-pagos', authenticateToken, async (req, res) => 
                 precio_consulta = $6,
                 acepta_mercadopago = $7,
                 acepta_transferencia = $8,
-                acepta_efectivo = $9
-            WHERE id = $10
+                acepta_efectivo = $9,
+                arca_cuit = $10,
+                arca_api_key = $11,
+                arca_punto_venta = $12
+            WHERE id = $13
             RETURNING cbu_cvu, alias_cbu, titular_cuenta, mercadopago_public_key,
-                      precio_consulta, acepta_mercadopago, acepta_transferencia, acepta_efectivo
+                      precio_consulta, acepta_mercadopago, acepta_transferencia, acepta_efectivo,
+                      arca_cuit, arca_punto_venta
         `, [
             cbu_cvu, alias_cbu, titular_cuenta, mercadopago_access_token,
             mercadopago_public_key, precio_consulta, acepta_mercadopago,
-            acepta_transferencia, acepta_efectivo, req.user.id
+            acepta_transferencia, acepta_efectivo, arca_cuit, arca_api_key,
+            arca_punto_venta, req.user.id
         ]);
         
         res.json({

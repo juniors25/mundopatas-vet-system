@@ -146,10 +146,17 @@
         <div id="facturacion-section" class="content-section" style="display: none;">
             <div class="row">
                 <div class="col-12">
-                    <h2><i class="fas fa-file-invoice-dollar me-2"></i>Gestión Financiera</h2>
+                    <h2><i class="fas fa-file-invoice-dollar me-2"></i>Gestión Financiera con ARCA</h2>
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>✅ Módulo Activo:</strong> Control completo de facturación, pagos y estados financieros. Sistema completamente funcional.
+                        <strong>✅ Módulo Activo:</strong> Sistema de facturación integrado con ARCA/AFIP. Registra y sincroniza tus facturas electrónicas.
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Integración ARCA:</strong> Las facturas generadas en ARCA se pueden registrar aquí para llevar un control unificado.
+                        <a href="/config-pagos.html" class="btn btn-sm btn-info ms-2">
+                            <i class="fas fa-cog me-1"></i>Configurar ARCA
+                        </a>
                     </div>
                     
                     <!-- Tarjetas de estadísticas -->
@@ -181,9 +188,15 @@
                     </div>
                     
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <button class="btn btn-primary me-2" onclick="showFacturaModal()">
                                 <i class="fas fa-plus me-1"></i>Nueva Factura
+                            </button>
+                            <button class="btn btn-success me-2" onclick="showFacturaARCAModal()">
+                                <i class="fas fa-file-import me-1"></i>Registrar desde ARCA
+                            </button>
+                            <button class="btn btn-info" onclick="verFacturasARCA()">
+                                <i class="fas fa-sync me-1"></i>Ver Facturas ARCA
                             </button>
                         </div>
                     </div>
