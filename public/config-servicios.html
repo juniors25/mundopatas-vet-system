@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Servicios - MUNDO PATAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/sistema.html">
+                <i class="fas fa-paw me-2"></i>MUNDO PATAS - Servicios
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/sistema.html">
+                            <i class="fas fa-arrow-left me-1"></i>Volver al Sistema
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2><i class="fas fa-concierge-bell me-2"></i>Configuración de Servicios</h2>
+                <p class="text-muted">Configura los servicios que ofrece tu veterinaria. Los clientes podrán verlos al agendar citas.</p>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Tip:</strong> Los servicios activos aparecerán en el formulario público de citas. Puedes desactivarlos temporalmente sin eliminarlos.
+                </div>
+
+                <div class="mb-3">
+                    <button class="btn btn-success me-2" onclick="showServicioModal()">
+                        <i class="fas fa-plus me-1"></i>Nuevo Servicio
+                    </button>
+                    <button class="btn btn-primary" onclick="crearServiciosDefecto()">
+                        <i class="fas fa-magic me-1"></i>Crear Servicios por Defecto
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Orden</th>
+                                        <th>Servicio</th>
+                                        <th>Descripción</th>
+                                        <th>Duración</th>
+                                        <th>Precio</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="servicios-list">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">
+                                            <i class="fas fa-concierge-bell fa-3x mb-3"></i><br>
+                                            No hay servicios configurados. Crea tu primer servicio o usa los servicios por defecto.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        let servicios = [];
+
+        // Verificar autenticación
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Debes iniciar sesión');
+                window.location.href = '/';
+                return;
+            }
+            
+            loadServicios();
+        });
+
+        // Cargar servicios
+        async function loadServicios() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/servicios`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar servicios');
+
+                servicios = await response.json();
+                renderServicios();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al cargar servicios', 'error');
+            }
+        }
+
+        function renderServicios() {
+            const tbody = document.getElementById('servicios-list');
+            
+            if (servicios.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            <i class="fas fa-concierge-bell fa-3x mb-3"></i><br>
+                            No hay servicios configurados. Crea tu primer servicio o usa los servicios por defecto.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = servicios.map(s => `
+                <tr>
+                    <td>${s.orden}</td>
+                    <td>
+                        <i class="fas ${s.icono || 'fa-concierge-bell'} me-2"></i>
+                        <strong>${s.nombre}</strong>
+                    </td>
+                    <td>${s.descripcion || '-'}</td>
+                    <td>${s.duracion_minutos} min</td>
+                    <td>$${parseFloat(s.precio || 0).toFixed(2)}</td>
+                    <td>
+                        ${s.activo ? 
+                            '<span class="badge bg-success">Activo</span>' : 
+                            '<span class="badge bg-secondary">Inactivo</span>'}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editarServicio(${s.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-${s.activo ? 'warning' : 'success'}" 
+                                onclick="toggleActivo(${s.id}, ${!s.activo})" 
+                                title="${s.activo ? 'Desactivar' : 'Activar'}">
+                            <i class="fas fa-${s.activo ? 'eye-slash' : 'eye'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="eliminarServicio(${s.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Mostrar modal de servicio
+        function showServicioModal(servicioId = null) {
+            const servicio = servicioId ? servicios.find(s => s.id === servicioId) : null;
+            const isEdit = !!servicio;
+
+            const iconos = [
+                { value: 'fa-stethoscope', label: 'Consulta' },
+                { value: 'fa-syringe', label: 'Vacuna' },
+                { value: 'fa-pills', label: 'Medicamento' },
+                { value: 'fa-user-md', label: 'Cirugía' },
+                { value: 'fa-shower', label: 'Baño' },
+                { value: 'fa-cut', label: 'Peluquería' },
+                { value: 'fa-flask', label: 'Laboratorio' },
+                { value: 'fa-x-ray', label: 'Radiografía' },
+                { value: 'fa-heartbeat', label: 'Ecografía' },
+                { value: 'fa-tooth', label: 'Dental' },
+                { value: 'fa-bone', label: 'Ortopedia' },
+                { value: 'fa-eye', label: 'Oftalmología' }
+            ];
+
+            const modalHTML = `
+                <div class="modal fade" id="servicioModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    ${isEdit ? 'Editar Servicio' : 'Nuevo Servicio'}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="servicioForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nombre del Servicio *</label>
+                                        <input type="text" class="form-control" id="nombre" 
+                                               value="${servicio?.nombre || ''}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Descripción</label>
+                                        <textarea class="form-control" id="descripcion" rows="2">${servicio?.descripcion || ''}</textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Duración (minutos) *</label>
+                                            <input type="number" class="form-control" id="duracion" 
+                                                   value="${servicio?.duracion_minutos || 30}" min="5" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Precio *</label>
+                                            <input type="number" class="form-control" id="precio" 
+                                                   value="${servicio?.precio || ''}" min="0" step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Icono</label>
+                                            <select class="form-select" id="icono">
+                                                ${iconos.map(i => `
+                                                    <option value="${i.value}" ${servicio?.icono === i.value ? 'selected' : ''}>
+                                                        ${i.label}
+                                                    </option>
+                                                `).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Orden</label>
+                                            <input type="number" class="form-control" id="orden" 
+                                                   value="${servicio?.orden || 0}" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="activo" 
+                                               ${servicio?.activo !== false ? 'checked' : ''}>
+                                        <label class="form-check-label" for="activo">
+                                            Servicio activo (visible para clientes)
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" onclick="guardarServicio(${servicioId})">
+                                    <i class="fas fa-save me-1"></i>Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const oldModal = document.getElementById('servicioModal');
+            if (oldModal) oldModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            new bootstrap.Modal(document.getElementById('servicioModal')).show();
+        }
+
+        async function guardarServicio(servicioId) {
+            const form = document.getElementById('servicioForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const data = {
+                nombre: document.getElementById('nombre').value,
+                descripcion: document.getElementById('descripcion').value,
+                duracion_minutos: parseInt(document.getElementById('duracion').value),
+                precio: parseFloat(document.getElementById('precio').value),
+                icono: document.getElementById('icono').value,
+                orden: parseInt(document.getElementById('orden').value),
+                activo: document.getElementById('activo').checked
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const url = servicioId ? `${API_URL}/api/servicios/${servicioId}` : `${API_URL}/api/servicios`;
+                const method = servicioId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error('Error al guardar servicio');
+
+                showNotification(servicioId ? 'Servicio actualizado' : 'Servicio creado', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('servicioModal')).hide();
+                loadServicios();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al guardar servicio', 'error');
+            }
+        }
+
+        function editarServicio(id) {
+            showServicioModal(id);
+        }
+
+        async function toggleActivo(id, nuevoEstado) {
+            const servicio = servicios.find(s => s.id === id);
+            if (!servicio) return;
+
+            servicio.activo = nuevoEstado;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/servicios/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(servicio)
+                });
+
+                if (!response.ok) throw new Error('Error al actualizar servicio');
+
+                showNotification(`Servicio ${nuevoEstado ? 'activado' : 'desactivado'}`, 'success');
+                loadServicios();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al actualizar servicio', 'error');
+            }
+        }
+
+        async function eliminarServicio(id) {
+            if (!confirm('¿Estás seguro de eliminar este servicio?')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/servicios/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al eliminar servicio');
+
+                showNotification('Servicio eliminado', 'success');
+                loadServicios();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al eliminar servicio', 'error');
+            }
+        }
+
+        async function crearServiciosDefecto() {
+            if (!confirm('¿Crear servicios por defecto? Esto agregará 8 servicios comunes de veterinaria.')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/servicios/crear-defecto`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al crear servicios');
+
+                const result = await response.json();
+                showNotification(`${result.cantidad} servicios creados exitosamente`, 'success');
+                loadServicios();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al crear servicios por defecto', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+            notification.style.zIndex = '9999';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

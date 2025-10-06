@@ -60,6 +60,13 @@
                                 </select>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Servicio *</label>
+                                <select class="form-select" id="servicio_id" required onchange="actualizarPrecioServicio()">
+                                    <option value="">Cargando servicios...</option>
+                                </select>
+                                <small class="text-muted">Selecciona el servicio que necesitas</small>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Fecha de la cita *</label>
                                 <input type="date" class="form-control" id="fecha_cita" required>
                             </div>
@@ -68,8 +75,8 @@
                                 <input type="time" class="form-control" id="hora_cita" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Motivo de la consulta *</label>
-                                <textarea class="form-control" id="motivo_consulta" rows="3" required></textarea>
+                                <label class="form-label">Motivo de la consulta / Comentarios adicionales</label>
+                                <textarea class="form-control" id="motivo_consulta" rows="3" placeholder="Describe brevemente el motivo de tu visita o cualquier información adicional"></textarea>
                             </div>
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary btn-lg">
@@ -196,6 +203,7 @@
         
         let configPagos = null;
         let citaData = {};
+        let servicios = [];
 
         // Cargar configuración de pagos del veterinario
         document.addEventListener('DOMContentLoaded', async function() {
@@ -208,8 +216,53 @@
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('fecha_cita').min = today;
 
+            await cargarServicios();
             await cargarConfigPagos();
         });
+
+        async function cargarServicios() {
+            try {
+                const response = await fetch(`${API_URL}/api/veterinario/${veterinarioId}/servicios`);
+                
+                if (!response.ok) {
+                    console.error('Error al cargar servicios');
+                    return;
+                }
+
+                servicios = await response.json();
+                const select = document.getElementById('servicio_id');
+                
+                if (servicios.length === 0) {
+                    select.innerHTML = '<option value="">No hay servicios disponibles</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Selecciona un servicio...</option>' +
+                    servicios.map(s => `
+                        <option value="${s.id}" data-precio="${s.precio}" data-duracion="${s.duracion_minutos}">
+                            ${s.nombre} - $${parseFloat(s.precio).toFixed(2)} (${s.duracion_minutos} min)
+                        </option>
+                    `).join('');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function actualizarPrecioServicio() {
+            const select = document.getElementById('servicio_id');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption && selectedOption.value) {
+                const precio = selectedOption.getAttribute('data-precio');
+                document.getElementById('precio_display').textContent = parseFloat(precio).toFixed(2);
+                
+                // Actualizar también en los métodos de pago
+                const montoTransferencia = document.getElementById('monto_transferencia');
+                if (montoTransferencia) {
+                    montoTransferencia.textContent = parseFloat(precio).toFixed(2);
+                }
+            }
+        }
 
         async function cargarConfigPagos() {
             try {

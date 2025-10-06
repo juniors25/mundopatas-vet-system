@@ -461,6 +461,22 @@ async function initializeDatabase() {
         `);
 
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS servicios_veterinaria (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                nombre TEXT NOT NULL,
+                descripcion TEXT,
+                duracion_minutos INTEGER DEFAULT 30,
+                precio DECIMAL(10,2),
+                activo BOOLEAN DEFAULT true,
+                orden INTEGER DEFAULT 0,
+                icono TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS notificaciones (
                 id SERIAL PRIMARY KEY,
                 veterinario_id INTEGER REFERENCES veterinarios(id),

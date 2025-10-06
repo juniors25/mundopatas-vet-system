@@ -1623,6 +1623,130 @@ app.get('/paciente', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'paciente.html'));
 });
 
+// ==================== ENDPOINTS DE SERVICIOS DE VETERINARIA ====================
+
+// Obtener servicios de un veterinario
+app.get('/api/servicios', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM servicios_veterinaria WHERE veterinario_id = $1 ORDER BY orden ASC, nombre ASC',
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo servicios:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener servicios públicos de un veterinario (para clientes)
+app.get('/api/veterinario/:id/servicios', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, nombre, descripcion, duracion_minutos, precio, icono FROM servicios_veterinaria WHERE veterinario_id = $1 AND activo = true ORDER BY orden ASC, nombre ASC',
+            [req.params.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo servicios públicos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear servicio
+app.post('/api/servicios', authenticateToken, async (req, res) => {
+    const { nombre, descripcion, duracion_minutos, precio, activo, orden, icono } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO servicios_veterinaria (
+                veterinario_id, nombre, descripcion, duracion_minutos, 
+                precio, activo, orden, icono
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [req.user.id, nombre, descripcion, duracion_minutos, precio, activo, orden, icono]);
+        
+        res.json({ message: 'Servicio creado exitosamente', servicio: result.rows[0] });
+    } catch (error) {
+        console.error('Error creando servicio:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar servicio
+app.put('/api/servicios/:id', authenticateToken, async (req, res) => {
+    const { nombre, descripcion, duracion_minutos, precio, activo, orden, icono } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            UPDATE servicios_veterinaria SET
+                nombre = $1, descripcion = $2, duracion_minutos = $3,
+                precio = $4, activo = $5, orden = $6, icono = $7,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $8 AND veterinario_id = $9
+            RETURNING *
+        `, [nombre, descripcion, duracion_minutos, precio, activo, orden, icono, req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Servicio no encontrado' });
+        }
+        
+        res.json({ message: 'Servicio actualizado exitosamente', servicio: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando servicio:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar servicio
+app.delete('/api/servicios/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'DELETE FROM servicios_veterinaria WHERE id = $1 AND veterinario_id = $2 RETURNING *',
+            [req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Servicio no encontrado' });
+        }
+        
+        res.json({ message: 'Servicio eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando servicio:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear servicios por defecto para un veterinario
+app.post('/api/servicios/crear-defecto', authenticateToken, async (req, res) => {
+    try {
+        const serviciosDefecto = [
+            { nombre: 'Consulta General', descripcion: 'Revisión general de salud', duracion: 30, precio: 5000, icono: 'fa-stethoscope', orden: 1 },
+            { nombre: 'Vacunación', descripcion: 'Aplicación de vacunas', duracion: 20, precio: 3000, icono: 'fa-syringe', orden: 2 },
+            { nombre: 'Desparasitación', descripcion: 'Tratamiento antiparasitario', duracion: 15, precio: 2500, icono: 'fa-pills', orden: 3 },
+            { nombre: 'Cirugía', descripcion: 'Procedimientos quirúrgicos', duracion: 120, precio: 15000, icono: 'fa-user-md', orden: 4 },
+            { nombre: 'Baño y Peluquería', descripcion: 'Servicio de estética', duracion: 60, precio: 4000, icono: 'fa-shower', orden: 5 },
+            { nombre: 'Análisis Clínicos', descripcion: 'Estudios de laboratorio', duracion: 30, precio: 6000, icono: 'fa-flask', orden: 6 },
+            { nombre: 'Radiografía', descripcion: 'Estudios radiológicos', duracion: 30, precio: 8000, icono: 'fa-x-ray', orden: 7 },
+            { nombre: 'Ecografía', descripcion: 'Estudios ecográficos', duracion: 45, precio: 10000, icono: 'fa-heartbeat', orden: 8 }
+        ];
+        
+        for (const servicio of serviciosDefecto) {
+            await pool.query(`
+                INSERT INTO servicios_veterinaria (
+                    veterinario_id, nombre, descripcion, duracion_minutos, 
+                    precio, icono, orden, activo
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+            `, [req.user.id, servicio.nombre, servicio.descripcion, servicio.duracion, servicio.precio, servicio.icono, servicio.orden]);
+        }
+        
+        res.json({ message: 'Servicios por defecto creados exitosamente', cantidad: serviciosDefecto.length });
+    } catch (error) {
+        console.error('Error creando servicios por defecto:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // ==================== ENDPOINTS DE REPORTES Y ESTADÍSTICAS ====================
 
 // Dashboard de reportes
