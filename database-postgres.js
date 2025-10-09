@@ -283,6 +283,67 @@ async function initializeDatabase() {
             )
         `);
 
+        // Tabla de Preguntas Frecuentes (FAQ)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS faq (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                pregunta TEXT NOT NULL,
+                respuesta TEXT NOT NULL,
+                orden INTEGER DEFAULT 0,
+                activo BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Ubicaciones y Valoraciones
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS ubicaciones (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id) UNIQUE,
+                latitud DECIMAL(10, 8),
+                longitud DECIMAL(11, 8),
+                direccion_completa TEXT,
+                ciudad TEXT,
+                provincia TEXT,
+                codigo_postal TEXT,
+                zona TEXT,
+                visible_en_mapa BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS valoraciones (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                puntuacion INTEGER CHECK (puntuacion >= 1 AND puntuacion <= 5),
+                categoria TEXT,
+                comentario TEXT,
+                aprobado BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Protocolos de Trabajo
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS protocolos_trabajo (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                titulo TEXT NOT NULL,
+                descripcion TEXT NOT NULL,
+                categoria TEXT,
+                contenido TEXT NOT NULL,
+                orden INTEGER DEFAULT 0,
+                activo BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Nuevas tablas para funcionalidades premium
         await pool.query(`
             CREATE TABLE IF NOT EXISTS citas (

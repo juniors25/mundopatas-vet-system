@@ -1936,6 +1936,293 @@ app.post('/api/notificaciones/verificar-todo', authenticateToken, async (req, re
     }
 });
 
+// ==================== RUTAS DE FAQ (PREGUNTAS FRECUENTES) ====================
+
+// Obtener todas las FAQ de un veterinario (público)
+app.get('/api/faq/:veterinarioId', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, pregunta, respuesta, orden FROM faq WHERE veterinario_id = $1 AND activo = true ORDER BY orden ASC, created_at ASC',
+            [req.params.veterinarioId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo FAQ:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener FAQ del veterinario autenticado
+app.get('/api/faq', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM faq WHERE veterinario_id = $1 ORDER BY orden ASC, created_at ASC',
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo FAQ:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear nueva FAQ
+app.post('/api/faq', authenticateToken, async (req, res) => {
+    const { pregunta, respuesta, orden } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'INSERT INTO faq (veterinario_id, pregunta, respuesta, orden) VALUES ($1, $2, $3, $4) RETURNING *',
+            [req.user.id, pregunta, respuesta, orden || 0]
+        );
+        res.json({ message: 'FAQ creada exitosamente', faq: result.rows[0] });
+    } catch (error) {
+        console.error('Error creando FAQ:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar FAQ
+app.put('/api/faq/:id', authenticateToken, async (req, res) => {
+    const { pregunta, respuesta, orden, activo } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'UPDATE faq SET pregunta = $1, respuesta = $2, orden = $3, activo = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND veterinario_id = $6 RETURNING *',
+            [pregunta, respuesta, orden, activo, req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'FAQ no encontrada' });
+        }
+        
+        res.json({ message: 'FAQ actualizada exitosamente', faq: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando FAQ:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar FAQ
+app.delete('/api/faq/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'DELETE FROM faq WHERE id = $1 AND veterinario_id = $2 RETURNING *',
+            [req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'FAQ no encontrada' });
+        }
+        
+        res.json({ message: 'FAQ eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando FAQ:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== RUTAS DE UBICACIONES Y VALORACIONES ====================
+
+// Obtener todas las veterinarias en el mapa (público)
+app.get('/api/ubicaciones/mapa', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                u.id, u.veterinario_id, u.latitud, u.longitud, u.direccion_completa, 
+                u.ciudad, u.provincia, u.zona,
+                v.nombre_veterinaria, v.nombre_veterinario, v.telefono,
+                COALESCE(AVG(val.puntuacion), 0) as promedio_valoracion,
+                COUNT(val.id) as total_valoraciones
+            FROM ubicaciones u
+            JOIN veterinarios v ON u.veterinario_id = v.id
+            LEFT JOIN valoraciones val ON v.id = val.veterinario_id AND val.aprobado = true
+            WHERE u.visible_en_mapa = true
+            GROUP BY u.id, u.veterinario_id, u.latitud, u.longitud, u.direccion_completa, 
+                     u.ciudad, u.provincia, u.zona, v.nombre_veterinaria, v.nombre_veterinario, v.telefono
+            ORDER BY promedio_valoracion DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo mapa:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener ubicación del veterinario autenticado
+app.get('/api/ubicaciones/mi-ubicacion', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM ubicaciones WHERE veterinario_id = $1',
+            [req.user.id]
+        );
+        res.json(result.rows[0] || null);
+    } catch (error) {
+        console.error('Error obteniendo ubicación:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear o actualizar ubicación
+app.post('/api/ubicaciones', authenticateToken, async (req, res) => {
+    const { latitud, longitud, direccion_completa, ciudad, provincia, codigo_postal, zona, visible_en_mapa } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO ubicaciones (veterinario_id, latitud, longitud, direccion_completa, ciudad, provincia, codigo_postal, zona, visible_en_mapa)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (veterinario_id) 
+            DO UPDATE SET 
+                latitud = $2, longitud = $3, direccion_completa = $4, ciudad = $5, 
+                provincia = $6, codigo_postal = $7, zona = $8, visible_en_mapa = $9,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING *
+        `, [req.user.id, latitud, longitud, direccion_completa, ciudad, provincia, codigo_postal, zona, visible_en_mapa !== false]);
+        
+        res.json({ message: 'Ubicación guardada exitosamente', ubicacion: result.rows[0] });
+    } catch (error) {
+        console.error('Error guardando ubicación:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener valoraciones de un veterinario (público)
+app.get('/api/valoraciones/:veterinarioId', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT v.*, c.nombre, c.apellido
+            FROM valoraciones v
+            LEFT JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.veterinario_id = $1 AND v.aprobado = true
+            ORDER BY v.created_at DESC
+        `, [req.params.veterinarioId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo valoraciones:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear valoración (requiere ser cliente)
+app.post('/api/valoraciones', authenticateToken, async (req, res) => {
+    const { veterinario_id, puntuacion, categoria, comentario } = req.body;
+    
+    try {
+        // Verificar que el usuario es cliente del veterinario
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [req.user.clienteId, veterinario_id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Solo los clientes pueden valorar' });
+        }
+        
+        const result = await pool.query(
+            'INSERT INTO valoraciones (veterinario_id, cliente_id, puntuacion, categoria, comentario) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [veterinario_id, req.user.clienteId, puntuacion, categoria, comentario]
+        );
+        
+        res.json({ message: 'Valoración enviada. Pendiente de aprobación.', valoracion: result.rows[0] });
+    } catch (error) {
+        console.error('Error creando valoración:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Aprobar/rechazar valoración
+app.put('/api/valoraciones/:id/aprobar', authenticateToken, async (req, res) => {
+    const { aprobado } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'UPDATE valoraciones SET aprobado = $1 WHERE id = $2 AND veterinario_id = $3 RETURNING *',
+            [aprobado, req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Valoración no encontrada' });
+        }
+        
+        res.json({ message: 'Valoración actualizada', valoracion: result.rows[0] });
+    } catch (error) {
+        console.error('Error aprobando valoración:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== RUTAS DE PROTOCOLOS DE TRABAJO ====================
+
+// Obtener protocolos del veterinario autenticado
+app.get('/api/protocolos', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM protocolos_trabajo WHERE veterinario_id = $1 ORDER BY orden ASC, created_at ASC',
+            [req.user.id]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo protocolos:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Crear nuevo protocolo
+app.post('/api/protocolos', authenticateToken, async (req, res) => {
+    const { titulo, descripcion, categoria, contenido, orden } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'INSERT INTO protocolos_trabajo (veterinario_id, titulo, descripcion, categoria, contenido, orden) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [req.user.id, titulo, descripcion, categoria, contenido, orden || 0]
+        );
+        res.json({ message: 'Protocolo creado exitosamente', protocolo: result.rows[0] });
+    } catch (error) {
+        console.error('Error creando protocolo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar protocolo
+app.put('/api/protocolos/:id', authenticateToken, async (req, res) => {
+    const { titulo, descripcion, categoria, contenido, orden, activo } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'UPDATE protocolos_trabajo SET titulo = $1, descripcion = $2, categoria = $3, contenido = $4, orden = $5, activo = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND veterinario_id = $8 RETURNING *',
+            [titulo, descripcion, categoria, contenido, orden, activo, req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Protocolo no encontrado' });
+        }
+        
+        res.json({ message: 'Protocolo actualizado exitosamente', protocolo: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando protocolo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar protocolo
+app.delete('/api/protocolos/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'DELETE FROM protocolos_trabajo WHERE id = $1 AND veterinario_id = $2 RETURNING *',
+            [req.params.id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Protocolo no encontrado' });
+        }
+        
+        res.json({ message: 'Protocolo eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando protocolo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // ==================== BOT DE NOTIFICACIONES AUTOMÁTICO ====================
 
 // Configurar cron job para verificaciones automáticas (si está habilitado)
