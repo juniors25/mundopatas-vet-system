@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUNDO PATAS - Encuentra tu Veterinaria</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+        }
+        .search-box {
+            background: white;
+            border-radius: 50px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .vet-card {
+            transition: all 0.3s;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+        }
+        .vet-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .rating-stars {
+            color: #ffc107;
+            font-size: 1.2rem;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .zona-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .top-rated-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-paw me-2"></i>
+                MUNDO PATAS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/mapa-veterinarias.html">
+                            <i class="fas fa-map-marker-alt me-1"></i>Veterinarias
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/landing-comercial.html">
+                            <i class="fas fa-info-circle me-1"></i>Para Veterinarios
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-map-marked-alt me-3"></i>
+                Encuentra la Mejor Veterinaria
+            </h1>
+            <p class="lead mb-4">Veterinarias cerca de ti, valoradas por conocimientos y calidad de atención</p>
+            
+            <!-- Search Box -->
+            <div class="search-box">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-0">
+                        <i class="fas fa-search text-primary"></i>
+                    </span>
+                    <input type="text" class="form-control border-0" id="search-input" placeholder="Buscar por nombre, ciudad o zona...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <!-- Filtros -->
+        <div class="filter-section">
+            <div class="row align-items-center">
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-filter me-2"></i>Filtrar por:
+                    </label>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-zona" onchange="filterVeterinarias()">
+                        <option value="">Todas las zonas</option>
+                        <option value="Norte">Norte</option>
+                        <option value="Sur">Sur</option>
+                        <option value="Este">Este</option>
+                        <option value="Oeste">Oeste</option>
+                        <option value="Centro">Centro</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-provincia" onchange="filterVeterinarias()">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-orden" onchange="filterVeterinarias()">
+                        <option value="valoracion">Mejor valoradas</option>
+                        <option value="nombre">Nombre A-Z</option>
+                        <option value="ciudad">Ciudad</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center border-primary">
+                    <div class="card-body">
+                        <i class="fas fa-hospital fa-3x text-primary mb-3"></i>
+                        <h3 id="total-veterinarias" class="mb-0">0</h3>
+                        <p class="text-muted mb-0">Veterinarias Registradas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-success">
+                    <div class="card-body">
+                        <i class="fas fa-star fa-3x text-warning mb-3"></i>
+                        <h3 id="promedio-general" class="mb-0">0.0</h3>
+                        <p class="text-muted mb-0">Promedio de Valoración</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-info">
+                    <div class="card-body">
+                        <i class="fas fa-comments fa-3x text-info mb-3"></i>
+                        <h3 id="total-valoraciones" class="mb-0">0</h3>
+                        <p class="text-muted mb-0">Valoraciones Totales</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Veterinarias -->
+        <h3 class="mb-4">
+            <i class="fas fa-list me-2"></i>
+            Veterinarias Disponibles
+            <span class="badge bg-primary" id="count-veterinarias">0</span>
+        </h3>
+        
+        <div id="veterinarias-list" class="row">
+            <!-- Las veterinarias se cargarán aquí -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-3 text-muted">Cargando veterinarias...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Veterinaria -->
+    <div class="modal fade" id="vetModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="vetModalTitle">
+                        <i class="fas fa-hospital me-2"></i>
+                        Detalles de la Veterinaria
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="vetModalBody">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2">
+                <i class="fas fa-paw me-2"></i>
+                <strong>MUNDO PATAS</strong> - Sistema de Gestión Veterinaria
+            </p>
+            <p class="mb-0 text-muted">
+                <small>© 2025 Mundo Patas. Todos los derechos reservados.</small>
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let veterinariasData = [];
+        let provincias = new Set();
+
+        // Cargar veterinarias al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVeterinarias();
+            
+            // Búsqueda en tiempo real
+            document.getElementById('search-input').addEventListener('input', function() {
+                filterVeterinarias();
+            });
+        });
+
+        async function loadVeterinarias() {
+            try {
+                const response = await fetch(`${window.location.origin}/api/ubicaciones/mapa`);
+                
+                if (!response.ok) throw new Error('Error al cargar veterinarias');
+                
+                veterinariasData = await response.json();
+                
+                // Extraer provincias únicas
+                veterinariasData.forEach(vet => {
+                    if (vet.provincia) provincias.add(vet.provincia);
+                });
+                
+                // Llenar select de provincias
+                const provinciaSelect = document.getElementById('filter-provincia');
+                Array.from(provincias).sort().forEach(prov => {
+                    const option = document.createElement('option');
+                    option.value = prov;
+                    option.textContent = prov;
+                    provinciaSelect.appendChild(option);
+                });
+                
+                // Actualizar estadísticas
+                updateStats();
+                
+                // Mostrar veterinarias
+                displayVeterinarias(veterinariasData);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('veterinarias-list').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <p class="text-muted">Error al cargar veterinarias. Por favor, intenta nuevamente.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function updateStats() {
+            const totalVets = veterinariasData.length;
+            const totalValoraciones = veterinariasData.reduce((sum, vet) => sum + parseInt(vet.total_valoraciones || 0), 0);
+            const promedioGeneral = totalVets > 0
+                ? (veterinariasData.reduce((sum, vet) => sum + parseFloat(vet.promedio_valoracion || 0), 0) / totalVets).toFixed(1)
+                : 0;
+            
+            document.getElementById('total-veterinarias').textContent = totalVets;
+            document.getElementById('total-valoraciones').textContent = totalValoraciones;
+            document.getElementById('promedio-general').textContent = promedioGeneral;
+        }
+
+        function filterVeterinarias() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const zona = document.getElementById('filter-zona').value;
+            const provincia = document.getElementById('filter-provincia').value;
+            const orden = document.getElementById('filter-orden').value;
+            
+            let filtered = veterinariasData.filter(vet => {
+                const matchSearch = !searchTerm || 
+                    vet.nombre_veterinaria.toLowerCase().includes(searchTerm) ||
+                    vet.ciudad.toLowerCase().includes(searchTerm) ||
+                    (vet.zona && vet.zona.toLowerCase().includes(searchTerm));
+                
+                const matchZona = !zona || vet.zona === zona;
+                const matchProvincia = !provincia || vet.provincia === provincia;
+                
+                return matchSearch && matchZona && matchProvincia;
+            });
+            
+            // Ordenar
+            if (orden === 'valoracion') {
+                filtered.sort((a, b) => parseFloat(b.promedio_valoracion) - parseFloat(a.promedio_valoracion));
+            } else if (orden === 'nombre') {
+                filtered.sort((a, b) => a.nombre_veterinaria.localeCompare(b.nombre_veterinaria));
+            } else if (orden === 'ciudad') {
+                filtered.sort((a, b) => a.ciudad.localeCompare(b.ciudad));
+            }
+            
+            displayVeterinarias(filtered);
+        }
+
+        function displayVeterinarias(veterinarias) {
+            const container = document.getElementById('veterinarias-list');
+            document.getElementById('count-veterinarias').textContent = veterinarias.length;
+            
+            if (veterinarias.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No se encontraron veterinarias con los filtros seleccionados.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = veterinarias.map((vet, index) => {
+                const rating = parseFloat(vet.promedio_valoracion || 0);
+                const stars = generateStars(rating);
+                const isTopRated = rating >= 4.5 && parseInt(vet.total_valoraciones) >= 5;
+                
+                const zonaBadgeColors = {
+                    'Norte': 'bg-primary',
+                    'Sur': 'bg-success',
+                    'Este': 'bg-warning',
+                    'Oeste': 'bg-info',
+                    'Centro': 'bg-danger'
+                };
+                
+                return `
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card vet-card h-100" onclick="showVetDetails(${vet.veterinario_id})">
+                            ${isTopRated ? '<div class="top-rated-badge"><i class="fas fa-crown me-1"></i>Top Rated</div>' : ''}
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">
+                                    <i class="fas fa-hospital me-2"></i>
+                                    ${vet.nombre_veterinaria}
+                                </h5>
+                                <p class="card-text mb-2">
+                                    <i class="fas fa-user-md me-2 text-muted"></i>
+                                    <strong>Dr/a. ${vet.nombre_veterinario}</strong>
+                                </p>
+                                <p class="card-text mb-2">
+                                    <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                                    ${vet.ciudad}, ${vet.provincia}
+                                </p>
+                                ${vet.zona ? `
+                                    <span class="zona-badge ${zonaBadgeColors[vet.zona] || 'bg-secondary'} text-white">
+                                        <i class="fas fa-compass me-1"></i>${vet.zona}
+                                    </span>
+                                ` : ''}
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="rating-stars">
+                                        ${stars}
+                                    </div>
+                                    <div class="text-end">
+                                        <strong class="text-warning">${rating.toFixed(1)}</strong>
+                                        <br>
+                                        <small class="text-muted">${vet.total_valoraciones} valoraciones</small>
+                                    </div>
+                                </div>
+                                ${vet.telefono ? `
+                                    <div class="mt-3">
+                                        <a href="tel:${vet.telefono}" class="btn btn-sm btn-outline-success w-100">
+                                            <i class="fas fa-phone me-1"></i>Llamar
+                                        </a>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function generateStars(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let stars = '';
+            for (let i = 0; i < fullStars; i++) stars += '<i class="fas fa-star"></i>';
+            if (hasHalfStar) stars += '<i class="fas fa-star-half-alt"></i>';
+            for (let i = 0; i < emptyStars; i++) stars += '<i class="far fa-star"></i>';
+            
+            return stars;
+        }
+
+        async function showVetDetails(veterinarioId) {
+            try {
+                const vet = veterinariasData.find(v => v.veterinario_id === veterinarioId);
+                
+                // Cargar FAQ y valoraciones
+                const [faqResponse, valResponse] = await Promise.all([
+                    fetch(`${window.location.origin}/api/faq/${veterinarioId}`),
+                    fetch(`${window.location.origin}/api/valoraciones/${veterinarioId}`)
+                ]);
+                
+                const faqs = await faqResponse.json();
+                const valoraciones = await valResponse.json();
+                
+                const rating = parseFloat(vet.promedio_valoracion || 0);
+                
+                const modalBody = document.getElementById('vetModalBody');
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>Información</h6>
+                            <p><strong>Veterinaria:</strong> ${vet.nombre_veterinaria}</p>
+                            <p><strong>Veterinario:</strong> Dr/a. ${vet.nombre_veterinario}</p>
+                            <p><strong>Dirección:</strong> ${vet.direccion_completa || 'No especificada'}</p>
+                            <p><strong>Ciudad:</strong> ${vet.ciudad}, ${vet.provincia}</p>
+                            ${vet.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${vet.telefono}">${vet.telefono}</a></p>` : ''}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning"><i class="fas fa-star me-2"></i>Valoración</h6>
+                            <div class="text-center mb-3">
+                                <h2 class="display-4 text-warning mb-0">${rating.toFixed(1)}</h2>
+                                <div class="rating-stars">${generateStars(rating)}</div>
+                                <p class="text-muted">${vet.total_valoraciones} valoraciones</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${faqs.length > 0 ? `
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-question-circle me-2"></i>Preguntas Frecuentes</h6>
+                        <div class="accordion" id="faqAccordion">
+                            ${faqs.map((faq, index) => `
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button ${index > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#faq${index}">
+                                            ${faq.pregunta}
+                                        </button>
+                                    </h2>
+                                    <div id="faq${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            ${faq.respuesta}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${valoraciones.length > 0 ? `
+                        <hr>
+                        <h6 class="text-success"><i class="fas fa-comments me-2"></i>Opiniones de Clientes</h6>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            ${valoraciones.slice(0, 5).map(val => `
+                                <div class="border-bottom pb-2 mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>${val.nombre || 'Cliente'} ${val.apellido || ''}</strong>
+                                        <span class="text-warning">${'★'.repeat(val.puntuacion)}${'☆'.repeat(5 - val.puntuacion)}</span>
+                                    </div>
+                                    ${val.comentario ? `<p class="mb-1 small">${val.comentario}</p>` : ''}
+                                    <small class="text-muted">${new Date(val.created_at).toLocaleDateString()}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+                
+                const modal = new bootstrap.Modal(document.getElementById('vetModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar detalles de la veterinaria');
+            }
+        }
+    </script>
+</body>
+</html>
