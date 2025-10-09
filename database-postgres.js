@@ -213,6 +213,14 @@ async function initializeDatabase() {
                 ) THEN
                     ALTER TABLE mascotas ADD COLUMN gramos_diarios DECIMAL(6,2);
                 END IF;
+                
+                -- Agregar contiene_granos si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='mascotas' AND column_name='contiene_granos'
+                ) THEN
+                    ALTER TABLE mascotas ADD COLUMN contiene_granos TEXT;
+                END IF;
             END $$;
         `);
 
@@ -231,6 +239,18 @@ async function initializeDatabase() {
         `);
         
         // Migrar campos adicionales si no existen (ejecutar migrate-consultas.js para agregar todos los campos)
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                -- Agregar proxima_desparasitacion si no existe
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='proxima_desparasitacion'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN proxima_desparasitacion DATE;
+                END IF;
+            END $$;
+        `);
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS analisis (

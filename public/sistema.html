@@ -357,6 +357,15 @@
                                     <input type="number" class="form-control" name="gramos_diarios" id="gramos-diarios-input" readonly>
                                     <small class="text-muted" id="dias-restantes-info"></small>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Contiene Granos</label>
+                                    <select class="form-select" name="contiene_granos">
+                                        <option value="">No especificado</option>
+                                        <option value="Si">Sí</option>
+                                        <option value="No">No (Grain Free)</option>
+                                    </select>
+                                    <small class="text-muted">Se notificará al cliente sobre el tipo de alimento</small>
+                                </div>
                                 
                                 <hr>
                                 <div class="mb-3">
@@ -508,7 +517,7 @@
                                 <h6 class="text-success mb-3"><i class="fas fa-flask me-2"></i>Estudios Complementarios</h6>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Tipo de Análisis</label>
+                                        <label class="form-label">Tipo de Examen</label>
                                         <select class="form-select" name="tipo_analisis">
                                             <option value="">Ninguno</option>
                                             <option value="Hemograma">Hemograma</option>
@@ -567,6 +576,11 @@
                                     <div class="col-md-4 mb-3">
                                         <label class="form-label">Producto Utilizado</label>
                                         <input type="text" class="form-control" name="producto_desparasitacion" placeholder="Ej: Drontal Plus">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Próxima Desparasitación</label>
+                                        <input type="date" class="form-control" name="proxima_desparasitacion">
+                                        <small class="text-muted">Fecha recomendada para próxima dosis</small>
                                     </div>
                                 </div>
 
@@ -733,6 +747,8 @@
                                         <option value="Parainfluenza">Parainfluenza</option>
                                         <option value="Bordetella">Bordetella</option>
                                         <option value="Leptospirosis">Leptospirosis</option>
+                                        <option value="Quíntuple">Quíntuple</option>
+                                        <option value="Séxtuple">Séxtuple</option>
                                         <option value="Triple Felina">Triple Felina</option>
                                         <option value="Leucemia Felina">Leucemia Felina</option>
                                         <option value="Otra">Otra</option>

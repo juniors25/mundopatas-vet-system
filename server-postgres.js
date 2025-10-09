@@ -233,7 +233,7 @@ app.post('/api/consultas', authenticateToken, async (req, res) => {
         tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
         electrocardiograma, medicion_presion_arterial, ecocardiograma,
         // Desparasitación
-        desparasitacion, fecha_desparasitacion, producto_desparasitacion,
+        desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
         // Diagnóstico
         diagnostico_presuntivo, diagnostico_final,
         // Tratamiento
@@ -264,14 +264,14 @@ app.post('/api/consultas', authenticateToken, async (req, res) => {
                 examen_otico, examen_neurologico, examen_aparato_locomotor,
                 tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
                 electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion,
+                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
                 diagnostico_presuntivo, diagnostico_final,
                 medicamento, dosis, intervalo, tratamiento_inyectable,
                 observaciones
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
                 $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                $29, $30, $31, $32, $33, $34, $35
+                $29, $30, $31, $32, $33, $34, $35, $36
             ) RETURNING *`,
             [
                 req.user.id, cliente_id, mascota_id, motivo,
@@ -281,7 +281,7 @@ app.post('/api/consultas', authenticateToken, async (req, res) => {
                 examen_otico, examen_neurologico, examen_aparato_locomotor,
                 tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
                 electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion,
+                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
                 diagnostico_presuntivo, diagnostico_final,
                 medicamento, dosis, intervalo, tratamiento_inyectable,
                 observaciones
@@ -330,7 +330,7 @@ app.put('/api/consultas/:id', authenticateToken, async (req, res) => {
         tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
         electrocardiograma, medicion_presion_arterial, ecocardiograma,
         // Desparasitación
-        desparasitacion, fecha_desparasitacion, producto_desparasitacion,
+        desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
         // Diagnóstico
         diagnostico_presuntivo, diagnostico_final,
         // Tratamiento
@@ -358,11 +358,11 @@ app.put('/api/consultas/:id', authenticateToken, async (req, res) => {
                 examen_otico = $13, examen_neurologico = $14, examen_aparato_locomotor = $15,
                 tipo_analisis = $16, fecha_analisis = $17, resultados_analisis = $18, archivo_analisis_url = $19,
                 electrocardiograma = $20, medicion_presion_arterial = $21, ecocardiograma = $22,
-                desparasitacion = $23, fecha_desparasitacion = $24, producto_desparasitacion = $25,
-                diagnostico_presuntivo = $26, diagnostico_final = $27,
-                medicamento = $28, dosis = $29, intervalo = $30, tratamiento_inyectable = $31,
-                observaciones = $32
-            WHERE id = $33
+                desparasitacion = $23, fecha_desparasitacion = $24, producto_desparasitacion = $25, proxima_desparasitacion = $26,
+                diagnostico_presuntivo = $27, diagnostico_final = $28,
+                medicamento = $29, dosis = $30, intervalo = $31, tratamiento_inyectable = $32,
+                observaciones = $33
+            WHERE id = $34
             RETURNING *`,
             [
                 motivo,
@@ -372,7 +372,7 @@ app.put('/api/consultas/:id', authenticateToken, async (req, res) => {
                 examen_otico, examen_neurologico, examen_aparato_locomotor,
                 tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
                 electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion,
+                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
                 diagnostico_presuntivo, diagnostico_final,
                 medicamento, dosis, intervalo, tratamiento_inyectable,
                 observaciones,
