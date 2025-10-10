@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar QR para Clientes - MUNDO PATAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-paw me-2"></i>MUNDO PATAS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="sistema.html">
+                            <i class="fas fa-arrow-left me-1"></i>Volver al Sistema
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="cerrarSesion()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <h1 class="display-5">
+                        <i class="fas fa-qrcode text-primary me-3"></i>
+                        Genera tu Código QR para Clientes
+                    </h1>
+                    <p class="lead text-muted">
+                        Crea un código QR personalizado para que tus clientes puedan agendar citas fácilmente
+                    </p>
+                </div>
+
+                <!-- Información del Veterinario -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-md me-2"></i>
+                            Tu Información
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Veterinario:</strong> <span id="nombre_veterinario">Cargando...</span></p>
+                                <p><strong>Email:</strong> <span id="email_veterinario">Cargando...</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Teléfono:</strong> <span id="telefono_veterinario">-</span></p>
+                                <p><strong>ID:</strong> <span id="id_veterinario">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generador de QR -->
+                <div class="row">
+                    <!-- Configuración -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-cog me-2"></i>
+                                    Configuración del QR
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Tamaño del QR</label>
+                                    <select class="form-select" id="qr_size" onchange="generarQR()">
+                                        <option value="200">Pequeño (200x200)</option>
+                                        <option value="300" selected>Mediano (300x300)</option>
+                                        <option value="400">Grande (400x400)</option>
+                                        <option value="500">Extra Grande (500x500)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Color del QR</label>
+                                    <input type="color" class="form-control form-control-color" id="qr_color" value="#000000" onchange="generarQR()">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Color de Fondo</label>
+                                    <input type="color" class="form-control form-control-color" id="qr_bg_color" value="#ffffff" onchange="generarQR()">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Texto Personalizado (opcional)</label>
+                                    <input type="text" class="form-control" id="texto_personalizado" placeholder="Ej: Agenda tu cita aquí" onchange="generarQR()">
+                                    <small class="text-muted">Este texto aparecerá debajo del QR al descargar</small>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>URL de Agendamiento:</strong><br>
+                                    <small id="url_agendamiento" class="text-break">-</small>
+                                </div>
+
+                                <button class="btn btn-primary w-100 mb-2" onclick="generarQR()">
+                                    <i class="fas fa-sync-alt me-2"></i>Regenerar QR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vista Previa del QR -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-eye me-2"></i>
+                                    Vista Previa
+                                </h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div id="qr_container" class="mb-3">
+                                    <canvas id="qr_canvas"></canvas>
+                                </div>
+                                <p class="text-muted" id="preview_text"></p>
+                                
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success btn-lg" onclick="descargarQR()">
+                                        <i class="fas fa-download me-2"></i>Descargar QR
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="descargarQRConTexto()">
+                                        <i class="fas fa-file-image me-2"></i>Descargar con Texto
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="imprimirQR()">
+                                        <i class="fas fa-print me-2"></i>Imprimir QR
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="copiarURL()">
+                                        <i class="fas fa-copy me-2"></i>Copiar URL
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instrucciones de Uso -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Cómo Usar tu Código QR
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-check-circle text-success me-2"></i>Para ti (Veterinario):</h6>
+                                <ol>
+                                    <li>Descarga el código QR generado</li>
+                                    <li>Imprímelo en tamaño A4 o carta</li>
+                                    <li>Colócalo en lugares visibles de tu clínica:
+                                        <ul>
+                                            <li>Recepción</li>
+                                            <li>Sala de espera</li>
+                                            <li>Consultorio</li>
+                                            <li>Entrada principal</li>
+                                        </ul>
+                                    </li>
+                                    <li>También puedes compartirlo en redes sociales</li>
+                                </ol>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-mobile-alt text-primary me-2"></i>Para tus Clientes:</h6>
+                                <ol>
+                                    <li>Escanean el QR con su celular</li>
+                                    <li>Se abre automáticamente el formulario de citas</li>
+                                    <li>Completan sus datos y los de su mascota</li>
+                                    <li>Seleccionan fecha y hora</li>
+                                    <li>Eligen método de pago</li>
+                                    <li>¡Cita agendada! Recibirán confirmación por email</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-star me-2"></i>
+                            <strong>Ventajas:</strong> Tus clientes pueden agendar citas 24/7, sin necesidad de llamar. 
+                            Tú recibes las citas directamente en tu sistema.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plantillas de Impresión -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>
+                            Plantillas Sugeridas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6>Cartel de Recepción</h6>
+                                    <p class="small text-muted">Tamaño: A4 (21x29.7cm)</p>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="descargarPlantilla('recepcion')">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6>Tarjeta de Mesa</h6>
+                                    <p class="small text-muted">Tamaño: 10x15cm</p>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="descargarPlantilla('mesa')">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-3 text-center">
+                                    <h6>Sticker para Ventana</h6>
+                                    <p class="small text-muted">Tamaño: 15x15cm</p>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="descargarPlantilla('sticker')">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        let veterinarioData = null;
+        let qrURL = '';
+
+        // Verificar autenticación al cargar
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('Debes iniciar sesión para acceder a esta página');
+                window.location.href = '/';
+                return;
+            }
+
+            await cargarDatosVeterinario();
+            generarQR();
+        });
+
+        async function cargarDatosVeterinario() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/veterinario/perfil`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar datos del veterinario');
+                }
+
+                veterinarioData = await response.json();
+                
+                // Mostrar información
+                document.getElementById('nombre_veterinario').textContent = veterinarioData.nombre_veterinario || 'N/A';
+                document.getElementById('email_veterinario').textContent = veterinarioData.email || 'N/A';
+                document.getElementById('telefono_veterinario').textContent = veterinarioData.telefono || 'N/A';
+                document.getElementById('id_veterinario').textContent = veterinarioData.id || 'N/A';
+
+                // Generar URL de agendamiento
+                qrURL = `${API_URL}/agendar-cita.html?vet=${veterinarioData.id}`;
+                document.getElementById('url_agendamiento').textContent = qrURL;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar datos del veterinario');
+            }
+        }
+
+        function generarQR() {
+            if (!qrURL) return;
+
+            const canvas = document.getElementById('qr_canvas');
+            const size = parseInt(document.getElementById('qr_size').value);
+            const color = document.getElementById('qr_color').value;
+            const bgColor = document.getElementById('qr_bg_color').value;
+            const textoPersonalizado = document.getElementById('texto_personalizado').value;
+
+            // Generar QR
+            QRCode.toCanvas(canvas, qrURL, {
+                width: size,
+                margin: 2,
+                color: {
+                    dark: color,
+                    light: bgColor
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('Error generando QR:', error);
+                    alert('Error al generar el código QR');
+                }
+            });
+
+            // Actualizar texto de vista previa
+            const textoPreview = textoPersonalizado || 'Escanea para agendar tu cita';
+            document.getElementById('preview_text').textContent = textoPreview;
+        }
+
+        function descargarQR() {
+            const canvas = document.getElementById('qr_canvas');
+            const link = document.createElement('a');
+            link.download = `QR-MundoPatas-${veterinarioData.id}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function descargarQRConTexto() {
+            const originalCanvas = document.getElementById('qr_canvas');
+            const textoPersonalizado = document.getElementById('texto_personalizado').value || 'Escanea para agendar tu cita';
+            
+            // Crear un nuevo canvas más grande para incluir texto
+            const newCanvas = document.createElement('canvas');
+            const ctx = newCanvas.getContext('2d');
+            
+            const padding = 40;
+            const textHeight = 100;
+            newCanvas.width = originalCanvas.width + (padding * 2);
+            newCanvas.height = originalCanvas.height + textHeight + (padding * 2);
+            
+            // Fondo blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+            
+            // Dibujar QR centrado
+            ctx.drawImage(originalCanvas, padding, padding);
+            
+            // Agregar texto
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(textoPersonalizado, newCanvas.width / 2, originalCanvas.height + padding + 40);
+            
+            // Agregar nombre de la clínica
+            ctx.font = '18px Arial';
+            ctx.fillText(veterinarioData.nombre_veterinario || 'MUNDO PATAS', newCanvas.width / 2, originalCanvas.height + padding + 70);
+            
+            // Descargar
+            const link = document.createElement('a');
+            link.download = `QR-MundoPatas-${veterinarioData.id}-completo.png`;
+            link.href = newCanvas.toDataURL();
+            link.click();
+        }
+
+        function imprimirQR() {
+            const canvas = document.getElementById('qr_canvas');
+            const textoPersonalizado = document.getElementById('texto_personalizado').value || 'Escanea para agendar tu cita';
+            
+            const ventanaImpresion = window.open('', '', 'width=800,height=600');
+            ventanaImpresion.document.write(`
+                <html>
+                <head>
+                    <title>Imprimir QR - MUNDO PATAS</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            padding: 50px;
+                        }
+                        h1 {
+                            color: #0d6efd;
+                            margin-bottom: 20px;
+                        }
+                        .qr-container {
+                            margin: 30px auto;
+                        }
+                        .texto {
+                            font-size: 24px;
+                            font-weight: bold;
+                            margin-top: 20px;
+                        }
+                        .info {
+                            font-size: 18px;
+                            color: #666;
+                            margin-top: 10px;
+                        }
+                        @media print {
+                            body { padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>🐾 MUNDO PATAS</h1>
+                    <div class="qr-container">
+                        <img src="${canvas.toDataURL()}" alt="Código QR">
+                    </div>
+                    <div class="texto">${textoPersonalizado}</div>
+                    <div class="info">${veterinarioData.nombre_veterinario || ''}</div>
+                    <div class="info">${veterinarioData.telefono || ''}</div>
+                </body>
+                </html>
+            `);
+            
+            ventanaImpresion.document.close();
+            ventanaImpresion.focus();
+            
+            setTimeout(() => {
+                ventanaImpresion.print();
+            }, 250);
+        }
+
+        function copiarURL() {
+            navigator.clipboard.writeText(qrURL).then(() => {
+                alert('✅ URL copiada al portapapeles');
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+                alert('Error al copiar la URL');
+            });
+        }
+
+        function descargarPlantilla(tipo) {
+            alert(`Función de plantilla "${tipo}" en desarrollo. Por ahora usa "Descargar con Texto" y ajusta el tamaño al imprimir.`);
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

@@ -660,6 +660,47 @@ async function initializeDatabase() {
             )
         `);
 
+        // Tabla para licencias del sistema
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS licencias (
+                id SERIAL PRIMARY KEY,
+                clave VARCHAR(100) UNIQUE NOT NULL,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                tipo VARCHAR(50) NOT NULL DEFAULT 'PREMIUM',
+                estado VARCHAR(50) NOT NULL DEFAULT 'disponible',
+                fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_activacion TIMESTAMP,
+                fecha_expiracion TIMESTAMP,
+                activa BOOLEAN DEFAULT false,
+                notas TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Índices para mejorar rendimiento
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_licencias_clave ON licencias(clave);
+            CREATE INDEX IF NOT EXISTS idx_licencias_veterinario ON licencias(veterinario_id);
+            CREATE INDEX IF NOT EXISTS idx_licencias_estado ON licencias(estado);
+        `);
+
+        // Agregar columnas de licencia a veterinarios si no existen
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='licencia_activa') THEN
+                    ALTER TABLE veterinarios ADD COLUMN licencia_activa BOOLEAN DEFAULT false;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='tipo_cuenta') THEN
+                    ALTER TABLE veterinarios ADD COLUMN tipo_cuenta VARCHAR(50) DEFAULT 'DEMO';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='veterinarios' AND column_name='fecha_expiracion_demo') THEN
+                    ALTER TABLE veterinarios ADD COLUMN fecha_expiracion_demo TIMESTAMP;
+                END IF;
+            END $$;
+        `);
+
         console.log('✅ Base de datos PostgreSQL inicializada correctamente');
     } catch (error) {
         console.error('❌ Error inicializando base de datos:', error);

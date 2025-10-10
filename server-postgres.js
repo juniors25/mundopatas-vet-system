@@ -1516,6 +1516,28 @@ app.use('/uploads', express.static('uploads'));
 
 // ==================== CONFIGURACIÓN DE PAGOS DEL VETERINARIO ====================
 
+// Obtener perfil completo del veterinario
+app.get('/api/veterinario/perfil', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, nombre_veterinaria, nombre_veterinario, email, telefono, direccion,
+                   cbu_cvu, alias_cbu, titular_cuenta, mercadopago_public_key,
+                   precio_consulta, acepta_mercadopago, acepta_transferencia, acepta_efectivo,
+                   created_at
+            FROM veterinarios WHERE id = $1
+        `, [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo perfil:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Obtener configuración de pagos
 app.get('/api/veterinario/config-pagos', authenticateToken, async (req, res) => {
     try {
@@ -2219,6 +2241,262 @@ app.delete('/api/protocolos/:id', authenticateToken, async (req, res) => {
         res.json({ message: 'Protocolo eliminado exitosamente' });
     } catch (error) {
         console.error('Error eliminando protocolo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== SISTEMA DE LICENCIAS ====================
+
+// Función para generar clave de licencia única
+function generarClaveLicencia() {
+    const prefix = 'MUNDOPATAS';
+    const year = new Date().getFullYear();
+    const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const timestamp = Date.now().toString(36).toUpperCase();
+    return `${prefix}-${year}-${random}-${timestamp}`;
+}
+
+// Generar nueva licencia (solo admin)
+app.post('/api/admin/licencias/generar', async (req, res) => {
+    const { tipo, duracion_meses, cantidad, notas } = req.body;
+    
+    // Verificación básica de admin (mejorar con autenticación real)
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+    
+    try {
+        const licenciasGeneradas = [];
+        const cantidadGenerar = cantidad || 1;
+        
+        for (let i = 0; i < cantidadGenerar; i++) {
+            const clave = generarClaveLicencia();
+            const result = await pool.query(`
+                INSERT INTO licencias (clave, tipo, notas)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `, [clave, tipo || 'PREMIUM', notas]);
+            
+            licenciasGeneradas.push(result.rows[0]);
+        }
+        
+        res.json({ 
+            message: `${cantidadGenerar} licencia(s) generada(s) exitosamente`,
+            licencias: licenciasGeneradas
+        });
+    } catch (error) {
+        console.error('Error generando licencias:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Validar y activar licencia
+app.post('/api/licencias/activar', authenticateToken, async (req, res) => {
+    const { clave } = req.body;
+    
+    try {
+        // Verificar que la licencia existe y está disponible
+        const licenciaResult = await pool.query(`
+            SELECT * FROM licencias WHERE clave = $1
+        `, [clave]);
+        
+        if (licenciaResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Clave de licencia inválida' });
+        }
+        
+        const licencia = licenciaResult.rows[0];
+        
+        // Verificar que no esté ya activada
+        if (licencia.activa || licencia.estado !== 'disponible') {
+            return res.status(400).json({ error: 'Esta licencia ya ha sido activada' });
+        }
+        
+        // Verificar que el veterinario no tenga ya una licencia activa
+        const veterinarioResult = await pool.query(`
+            SELECT licencia_activa, tipo_cuenta FROM veterinarios WHERE id = $1
+        `, [req.user.id]);
+        
+        if (veterinarioResult.rows[0].licencia_activa) {
+            return res.status(400).json({ error: 'Ya tienes una licencia activa' });
+        }
+        
+        // Calcular fecha de expiración (1 año por defecto)
+        const fechaExpiracion = new Date();
+        fechaExpiracion.setFullYear(fechaExpiracion.getFullYear() + 1);
+        
+        // Activar licencia
+        await pool.query(`
+            UPDATE licencias SET
+                veterinario_id = $1,
+                estado = 'activa',
+                fecha_activacion = CURRENT_TIMESTAMP,
+                fecha_expiracion = $2,
+                activa = true,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+        `, [req.user.id, fechaExpiracion, licencia.id]);
+        
+        // Actualizar veterinario
+        await pool.query(`
+            UPDATE veterinarios SET
+                licencia_activa = true,
+                tipo_cuenta = $1,
+                fecha_expiracion_demo = NULL
+            WHERE id = $2
+        `, [licencia.tipo, req.user.id]);
+        
+        res.json({ 
+            message: 'Licencia activada exitosamente',
+            tipo: licencia.tipo,
+            fecha_expiracion: fechaExpiracion
+        });
+    } catch (error) {
+        console.error('Error activando licencia:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Validar clave de licencia (sin activar)
+app.post('/api/licencias/validar', async (req, res) => {
+    const { clave } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            SELECT id, tipo, estado, activa FROM licencias WHERE clave = $1
+        `, [clave]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ valid: false, error: 'Clave de licencia inválida' });
+        }
+        
+        const licencia = result.rows[0];
+        
+        if (licencia.activa || licencia.estado !== 'disponible') {
+            return res.status(400).json({ valid: false, error: 'Esta licencia ya ha sido activada' });
+        }
+        
+        res.json({ 
+            valid: true,
+            tipo: licencia.tipo,
+            message: 'Clave válida. Lista para activar.'
+        });
+    } catch (error) {
+        console.error('Error validando licencia:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener estado de licencia del veterinario
+app.get('/api/licencias/mi-licencia', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT l.*, v.tipo_cuenta, v.fecha_expiracion_demo
+            FROM licencias l
+            RIGHT JOIN veterinarios v ON l.veterinario_id = v.id
+            WHERE v.id = $1 AND l.activa = true
+        `, [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            // No tiene licencia activa
+            const vetResult = await pool.query(`
+                SELECT tipo_cuenta, fecha_expiracion_demo FROM veterinarios WHERE id = $1
+            `, [req.user.id]);
+            
+            return res.json({
+                tiene_licencia: false,
+                tipo_cuenta: vetResult.rows[0].tipo_cuenta,
+                fecha_expiracion_demo: vetResult.rows[0].fecha_expiracion_demo
+            });
+        }
+        
+        res.json({
+            tiene_licencia: true,
+            licencia: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error obteniendo licencia:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Listar todas las licencias (solo admin)
+app.get('/api/admin/licencias', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            SELECT l.*, v.nombre_veterinario, v.email
+            FROM licencias l
+            LEFT JOIN veterinarios v ON l.veterinario_id = v.id
+            ORDER BY l.created_at DESC
+        `);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error listando licencias:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Convertir cuenta DEMO a PREMIUM al activar licencia
+app.post('/api/veterinario/convertir-demo', authenticateToken, async (req, res) => {
+    const { clave_licencia } = req.body;
+    
+    try {
+        // Verificar que es cuenta demo
+        const vetResult = await pool.query(`
+            SELECT tipo_cuenta FROM veterinarios WHERE id = $1
+        `, [req.user.id]);
+        
+        if (vetResult.rows[0].tipo_cuenta !== 'DEMO') {
+            return res.status(400).json({ error: 'Esta cuenta ya no es DEMO' });
+        }
+        
+        // Activar licencia (reutiliza el endpoint de activación)
+        const licenciaResult = await pool.query(`
+            SELECT * FROM licencias WHERE clave = $1 AND estado = 'disponible' AND activa = false
+        `, [clave_licencia]);
+        
+        if (licenciaResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Clave de licencia inválida o ya activada' });
+        }
+        
+        const licencia = licenciaResult.rows[0];
+        const fechaExpiracion = new Date();
+        fechaExpiracion.setFullYear(fechaExpiracion.getFullYear() + 1);
+        
+        // Activar licencia
+        await pool.query(`
+            UPDATE licencias SET
+                veterinario_id = $1,
+                estado = 'activa',
+                fecha_activacion = CURRENT_TIMESTAMP,
+                fecha_expiracion = $2,
+                activa = true,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+        `, [req.user.id, fechaExpiracion, licencia.id]);
+        
+        // Actualizar veterinario
+        await pool.query(`
+            UPDATE veterinarios SET
+                licencia_activa = true,
+                tipo_cuenta = $1,
+                fecha_expiracion_demo = NULL
+            WHERE id = $2
+        `, [licencia.tipo, req.user.id]);
+        
+        res.json({ 
+            message: '¡Felicitaciones! Tu cuenta DEMO ha sido convertida a PREMIUM',
+            tipo: licencia.tipo,
+            fecha_expiracion: fechaExpiracion
+        });
+    } catch (error) {
+        console.error('Error convirtiendo demo:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
