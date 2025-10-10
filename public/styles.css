@@ -325,6 +325,88 @@ body {
         width: 100%;
         margin-bottom: 10px;
     }
+
+    /* Hero Section Mobile */
+    .hero-section {
+        height: auto;
+        min-height: 100vh;
+        padding: 60px 0;
+    }
+
+    .hero-title {
+        font-size: 2.5rem !important;
+        letter-spacing: 1px;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem !important;
+    }
+
+    .hero-description {
+        font-size: 1rem !important;
+    }
+
+    .hero-logo i {
+        font-size: 3.5rem !important;
+    }
+
+    .hero-buttons .btn {
+        width: 100%;
+        margin: 0 0 10px 0 !important;
+        padding: 12px 20px !important;
+        font-size: 0.9rem;
+    }
+
+    /* Stats Section Mobile */
+    .stat-item h2 {
+        font-size: 2.5rem !important;
+    }
+
+    .stat-item p {
+        font-size: 1rem !important;
+    }
+
+    /* Section Titles Mobile */
+    .section-title {
+        font-size: 1.8rem !important;
+    }
+
+    .section-subtitle {
+        font-size: 1rem !important;
+    }
+
+    /* Feature Cards Mobile */
+    .feature-card {
+        margin-bottom: 20px;
+    }
+
+    .feature-icon {
+        font-size: 2.5rem !important;
+    }
+
+    /* Contact Card Mobile */
+    .contact-card-floating {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        margin: 20px auto !important;
+        width: 90% !important;
+        max-width: 300px !important;
+    }
+
+    /* CTA Section Mobile */
+    .cta-section h2 {
+        font-size: 1.8rem !important;
+    }
+
+    .cta-section .lead {
+        font-size: 1.1rem !important;
+    }
+
+    .cta-section .btn {
+        width: 90%;
+        padding: 15px 30px !important;
+    }
 }
 
 /* Loading spinner */

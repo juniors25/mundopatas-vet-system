@@ -24,6 +24,62 @@
             background-color: #f8f9fa;
             border-left-color: #0056b3;
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .card {
+                margin-bottom: 15px;
+            }
+            .card-header h4 {
+                font-size: 1.2rem;
+            }
+            .btn {
+                font-size: 0.9rem;
+                padding: 8px 15px;
+                margin-bottom: 5px;
+            }
+            .nav-tabs .nav-link {
+                font-size: 0.85rem;
+                padding: 8px 12px;
+            }
+            .form-label {
+                font-size: 0.9rem;
+            }
+            .form-control, .form-select {
+                font-size: 0.9rem;
+            }
+            .table {
+                font-size: 0.85rem;
+            }
+            .faq-item, .protocolo-item {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+            .modal-dialog {
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card-header h4 {
+                font-size: 1rem;
+            }
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            .nav-tabs .nav-link {
+                white-space: nowrap;
+            }
+        }
     </style>
 </head>
 <body>
