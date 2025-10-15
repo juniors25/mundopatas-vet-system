@@ -701,7 +701,104 @@ async function initializeDatabase() {
             END $$;
         `);
 
+        // ==================== TABLAS PARA CONTROL PERSONAL DE CLIENTES ====================
+        
+        // Tabla para registrar clientes y sus pagos (uso personal del administrador)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS mis_clientes_ventas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                licencia_id INTEGER REFERENCES licencias(id),
+                
+                -- Datos del cliente
+                nombre_completo VARCHAR(200) NOT NULL,
+                email VARCHAR(200),
+                telefono VARCHAR(50),
+                whatsapp VARCHAR(50),
+                clinica_nombre VARCHAR(200),
+                ciudad VARCHAR(100),
+                provincia VARCHAR(100),
+                
+                -- Datos de pago
+                monto_pagado DECIMAL(10,2),
+                moneda VARCHAR(10) DEFAULT 'ARS',
+                metodo_pago VARCHAR(50),
+                fecha_pago DATE,
+                comprobante_numero VARCHAR(100),
+                comprobante_foto TEXT,
+                
+                -- Estado de la venta
+                estado_venta VARCHAR(50) DEFAULT 'completada',
+                tipo_venta VARCHAR(50) DEFAULT 'nueva',
+                
+                -- Notas personales
+                notas TEXT,
+                seguimiento TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla para historial de pagos y renovaciones
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS historial_pagos_clientes (
+                id SERIAL PRIMARY KEY,
+                cliente_venta_id INTEGER REFERENCES mis_clientes_ventas(id),
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                
+                -- Datos del pago
+                monto DECIMAL(10,2) NOT NULL,
+                moneda VARCHAR(10) DEFAULT 'ARS',
+                metodo_pago VARCHAR(50),
+                fecha_pago DATE NOT NULL,
+                comprobante_numero VARCHAR(100),
+                comprobante_foto TEXT,
+                
+                -- Tipo de pago
+                tipo VARCHAR(50) DEFAULT 'renovacion',
+                concepto TEXT,
+                
+                -- Notas
+                notas TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla para recordatorios de renovación
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS recordatorios_renovacion (
+                id SERIAL PRIMARY KEY,
+                cliente_venta_id INTEGER REFERENCES mis_clientes_ventas(id),
+                
+                -- Datos del recordatorio
+                fecha_recordatorio DATE NOT NULL,
+                dias_antes_vencimiento INTEGER,
+                mensaje TEXT,
+                
+                -- Estado
+                enviado BOOLEAN DEFAULT false,
+                fecha_envio TIMESTAMP,
+                metodo_envio VARCHAR(50),
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Índices para mejorar rendimiento
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_mis_clientes_veterinario ON mis_clientes_ventas(veterinario_id);
+            CREATE INDEX IF NOT EXISTS idx_mis_clientes_licencia ON mis_clientes_ventas(licencia_id);
+            CREATE INDEX IF NOT EXISTS idx_historial_pagos_cliente ON historial_pagos_clientes(cliente_venta_id);
+            CREATE INDEX IF NOT EXISTS idx_recordatorios_cliente ON recordatorios_renovacion(cliente_venta_id);
+        `);
+
         console.log('✅ Base de datos PostgreSQL inicializada correctamente');
+        console.log('✅ Tablas de control personal de clientes creadas');
     } catch (error) {
         console.error('❌ Error inicializando base de datos:', error);
         throw error;

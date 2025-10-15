@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Negocio - Mundo Patas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+        .dashboard {
+            display: none;
+            padding: 20px;
+        }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .badge-activa {
+            background: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .badge-disponible {
+            background: #cce5ff;
+            color: #004085;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2 class="text-center mb-4" style="color: var(--primary);">🐾 Mi Negocio</h2>
+            <p class="text-center text-muted mb-4">Control Personal de Ventas</p>
+            <input type="password" id="password" class="form-control mb-3" placeholder="Contraseña" />
+            <button onclick="login()" class="btn btn-primary-custom w-100">Iniciar Sesión</button>
+            <p id="error" class="text-danger text-center mt-3" style="display:none;"></p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">🐾 Mi Negocio - Mundo Patas</h2>
+                    <p class="text-muted mb-0">Control Personal de Ventas y Clientes</p>
+                </div>
+                <button onclick="logout()" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <i class="fas fa-shopping-cart fa-2x text-primary mb-2"></i>
+                    <div class="stat-number" id="totalVentas">0</div>
+                    <p class="text-muted mb-0">Total Ventas</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <i class="fas fa-dollar-sign fa-2x text-success mb-2"></i>
+                    <div class="stat-number" id="ingresosTotales">$0</div>
+                    <p class="text-muted mb-0">Ingresos Totales</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt fa-2x text-warning mb-2"></i>
+                    <div class="stat-number" id="ventasMes">0</div>
+                    <p class="text-muted mb-0">Ventas del Mes</p>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <i class="fas fa-bell fa-2x text-danger mb-2"></i>
+                    <div class="stat-number" id="proximasRenovaciones">0</div>
+                    <p class="text-muted mb-0">Próximas Renovaciones</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-pills mb-3">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="pill" href="#ventas">Mis Ventas</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="pill" href="#nueva">Nueva Venta</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="pill" href="#renovaciones">Renovaciones</a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Mis Ventas -->
+            <div class="tab-pane fade show active" id="ventas">
+                <div class="content-card">
+                    <h4 class="mb-4">📊 Mis Ventas Registradas</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Clínica</th>
+                                    <th>Contacto</th>
+                                    <th>Monto</th>
+                                    <th>Método</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ventasTable">
+                                <tr>
+                                    <td colspan="8" class="text-center">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nueva Venta -->
+            <div class="tab-pane fade" id="nueva">
+                <div class="content-card">
+                    <h4 class="mb-4">➕ Registrar Nueva Venta</h4>
+                    <form id="formNuevaVenta">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre Completo *</label>
+                                <input type="text" class="form-control" id="nombreCompleto" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefono">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">WhatsApp</label>
+                                <input type="tel" class="form-control" id="whatsapp">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre de la Clínica</label>
+                                <input type="text" class="form-control" id="clinicaNombre">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ciudad</label>
+                                <input type="text" class="form-control" id="ciudad">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Monto Pagado *</label>
+                                <input type="number" class="form-control" id="montoPagado" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Método de Pago *</label>
+                                <select class="form-select" id="metodoPago" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Mercado Pago">Mercado Pago</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Fecha de Pago *</label>
+                                <input type="date" class="form-control" id="fechaPago" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Comprobante Número</label>
+                                <input type="text" class="form-control" id="comprobanteNumero">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Clave de Licencia *</label>
+                                <select class="form-select" id="licenciaId" required>
+                                    <option value="">Seleccionar licencia...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notas</label>
+                            <textarea class="form-control" id="notas" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fas fa-save me-2"></i>Guardar Venta
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Renovaciones -->
+            <div class="tab-pane fade" id="renovaciones">
+                <div class="content-card">
+                    <h4 class="mb-4">🔔 Próximas Renovaciones</h4>
+                    <div id="renovacionesList">
+                        <p class="text-muted">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles -->
+    <div class="modal fade" id="detallesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles de Venta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detallesBody">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const PASSWORD = 'mundopatas2024';
+        const API_BASE = window.location.origin;
+        const AUTH_HEADER = { 'Authorization': 'Bearer admin-mundopatas-2024' };
+
+        // Login
+        function login() {
+            const pass = document.getElementById('password').value;
+            if (pass === PASSWORD) {
+                localStorage.setItem('miNegocioAuth', 'true');
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadDashboard();
+            } else {
+                document.getElementById('error').textContent = 'Contraseña incorrecta';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('miNegocioAuth');
+            location.reload();
+        }
+
+        // Check Auth
+        window.onload = function() {
+            if (localStorage.getItem('miNegocioAuth') === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadDashboard();
+            }
+            document.getElementById('fechaPago').valueAsDate = new Date();
+        };
+
+        // Load Dashboard
+        async function loadDashboard() {
+            await loadEstadisticas();
+            await loadVentas();
+            await loadLicenciasDisponibles();
+            await loadRenovaciones();
+        }
+
+        // Load Estadísticas
+        async function loadEstadisticas() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/mis-clientes/estadisticas`, {
+                    headers: AUTH_HEADER
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalVentas').textContent = data.total_ventas;
+                    document.getElementById('ingresosTotales').textContent = `$${data.ingresos_totales.toLocaleString()}`;
+                    document.getElementById('ventasMes').textContent = data.ventas_mes_actual;
+                    document.getElementById('proximasRenovaciones').textContent = data.proximas_renovaciones.length;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Load Ventas
+        async function loadVentas() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/mis-clientes/ventas`, {
+                    headers: AUTH_HEADER
+                });
+                if (response.ok) {
+                    const ventas = await response.json();
+                    const tbody = document.getElementById('ventasTable');
+                    
+                    if (ventas.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No hay ventas registradas</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = ventas.map(v => `
+                        <tr>
+                            <td><strong>${v.nombre_completo}</strong></td>
+                            <td>${v.clinica_nombre || '-'}</td>
+                            <td>
+                                ${v.email ? `<i class="fas fa-envelope"></i> ${v.email}<br>` : ''}
+                                ${v.whatsapp ? `<i class="fab fa-whatsapp"></i> ${v.whatsapp}` : ''}
+                            </td>
+                            <td><strong>$${parseFloat(v.monto_pagado || 0).toLocaleString()}</strong></td>
+                            <td>${v.metodo_pago || '-'}</td>
+                            <td>${new Date(v.fecha_pago).toLocaleDateString()}</td>
+                            <td><span class="badge-${v.licencia_estado === 'activa' ? 'activa' : 'disponible'}">${v.licencia_estado || 'Sin licencia'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="verDetalles(${v.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Load Licencias Disponibles
+        async function loadLicenciasDisponibles() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/licencias`, {
+                    headers: AUTH_HEADER
+                });
+                if (response.ok) {
+                    const licencias = await response.json();
+                    const disponibles = licencias.filter(l => l.estado === 'disponible');
+                    const select = document.getElementById('licenciaId');
+                    
+                    select.innerHTML = '<option value="">Seleccionar licencia...</option>' +
+                        disponibles.map(l => `<option value="${l.id}">${l.clave} (${l.tipo})</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Load Renovaciones
+        async function loadRenovaciones() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/mis-clientes/estadisticas`, {
+                    headers: AUTH_HEADER
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const div = document.getElementById('renovacionesList');
+                    
+                    if (data.proximas_renovaciones.length === 0) {
+                        div.innerHTML = '<p class="text-muted">No hay renovaciones próximas</p>';
+                        return;
+                    }
+
+                    div.innerHTML = data.proximas_renovaciones.map(r => `
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>${r.nombre_completo}</h6>
+                            <p class="mb-1"><strong>Clínica:</strong> ${r.clinica_nombre || '-'}</p>
+                            <p class="mb-1"><strong>Vence en:</strong> ${Math.floor(r.dias_restantes)} días (${new Date(r.fecha_expiracion).toLocaleDateString()})</p>
+                            <p class="mb-0"><strong>Contacto:</strong> ${r.whatsapp || r.telefono || r.email}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Guardar Nueva Venta
+        document.getElementById('formNuevaVenta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                nombre_completo: document.getElementById('nombreCompleto').value,
+                email: document.getElementById('email').value,
+                telefono: document.getElementById('telefono').value,
+                whatsapp: document.getElementById('whatsapp').value,
+                clinica_nombre: document.getElementById('clinicaNombre').value,
+                ciudad: document.getElementById('ciudad').value,
+                monto_pagado: parseFloat(document.getElementById('montoPagado').value),
+                metodo_pago: document.getElementById('metodoPago').value,
+                fecha_pago: document.getElementById('fechaPago').value,
+                comprobante_numero: document.getElementById('comprobanteNumero').value,
+                licencia_id: parseInt(document.getElementById('licenciaId').value),
+                notas: document.getElementById('notas').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/mis-clientes/registrar-venta`, {
+                    method: 'POST',
+                    headers: {
+                        ...AUTH_HEADER,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('✅ Venta registrada exitosamente');
+                    document.getElementById('formNuevaVenta').reset();
+                    document.getElementById('fechaPago').valueAsDate = new Date();
+                    loadDashboard();
+                    // Switch to ventas tab
+                    document.querySelector('[href="#ventas"]').click();
+                } else {
+                    const error = await response.json();
+                    alert('❌ Error: ' + error.error);
+                }
+            } catch (error) {
+                alert('❌ Error al guardar: ' + error.message);
+            }
+        });
+
+        // Ver Detalles
+        async function verDetalles(id) {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/mis-clientes/ventas/${id}`, {
+                    headers: AUTH_HEADER
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const v = data.venta;
+                    
+                    document.getElementById('detallesBody').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Información del Cliente</h6>
+                                <p><strong>Nombre:</strong> ${v.nombre_completo}</p>
+                                <p><strong>Email:</strong> ${v.email || '-'}</p>
+                                <p><strong>Teléfono:</strong> ${v.telefono || '-'}</p>
+                                <p><strong>WhatsApp:</strong> ${v.whatsapp || '-'}</p>
+                                <p><strong>Clínica:</strong> ${v.clinica_nombre || '-'}</p>
+                                <p><strong>Ciudad:</strong> ${v.ciudad || '-'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Información de Pago</h6>
+                                <p><strong>Monto:</strong> $${parseFloat(v.monto_pagado || 0).toLocaleString()}</p>
+                                <p><strong>Método:</strong> ${v.metodo_pago || '-'}</p>
+                                <p><strong>Fecha:</strong> ${new Date(v.fecha_pago).toLocaleDateString()}</p>
+                                <p><strong>Comprobante:</strong> ${v.comprobante_numero || '-'}</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Licencia</h6>
+                        <p><strong>Clave:</strong> <code>${v.licencia_clave}</code></p>
+                        <p><strong>Tipo:</strong> ${v.licencia_tipo}</p>
+                        <p><strong>Estado:</strong> ${v.licencia_estado}</p>
+                        ${v.fecha_activacion ? `<p><strong>Activada:</strong> ${new Date(v.fecha_activacion).toLocaleDateString()}</p>` : ''}
+                        ${v.fecha_expiracion ? `<p><strong>Expira:</strong> ${new Date(v.fecha_expiracion).toLocaleDateString()}</p>` : ''}
+                        ${v.notas ? `<hr><h6>Notas</h6><p>${v.notas}</p>` : ''}
+                    `;
+                    
+                    new bootstrap.Modal(document.getElementById('detallesModal')).show();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

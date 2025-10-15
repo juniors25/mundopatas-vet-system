@@ -2442,6 +2442,28 @@ app.get('/api/admin/licencias', async (req, res) => {
     }
 });
 
+// Listar todos los veterinarios (solo admin)
+app.get('/api/admin/veterinarios', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            SELECT id, nombre_veterinario, email, telefono, tipo_cuenta, 
+                   licencia_activa, created_at, updated_at
+            FROM veterinarios
+            ORDER BY created_at DESC
+        `);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error listando veterinarios:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Convertir cuenta DEMO a PREMIUM al activar licencia
 app.post('/api/veterinario/convertir-demo', authenticateToken, async (req, res) => {
     const { clave_licencia } = req.body;
@@ -2497,6 +2519,295 @@ app.post('/api/veterinario/convertir-demo', authenticateToken, async (req, res) 
         });
     } catch (error) {
         console.error('Error convirtiendo demo:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== GESTIÓN PERSONAL DE CLIENTES (ADMIN) ====================
+
+// Registrar nueva venta de licencia
+app.post('/api/admin/mis-clientes/registrar-venta', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const {
+        nombre_completo, email, telefono, whatsapp, clinica_nombre,
+        ciudad, provincia, monto_pagado, metodo_pago, fecha_pago,
+        comprobante_numero, notas, licencia_id
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO mis_clientes_ventas (
+                veterinario_id, licencia_id, nombre_completo, email, telefono,
+                whatsapp, clinica_nombre, ciudad, provincia, monto_pagado,
+                metodo_pago, fecha_pago, comprobante_numero, notas
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING *
+        `, [null, licencia_id, nombre_completo, email, telefono, whatsapp,
+            clinica_nombre, ciudad, provincia, monto_pagado, metodo_pago,
+            fecha_pago, comprobante_numero, notas]);
+
+        res.json({
+            message: 'Venta registrada exitosamente',
+            venta: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error registrando venta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Listar todas las ventas
+app.get('/api/admin/mis-clientes/ventas', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    try {
+        const result = await pool.query(`
+            SELECT 
+                mcv.*,
+                l.clave as licencia_clave,
+                l.tipo as licencia_tipo,
+                l.estado as licencia_estado,
+                l.fecha_activacion,
+                l.fecha_expiracion,
+                v.nombre_veterinario,
+                v.email as veterinario_email
+            FROM mis_clientes_ventas mcv
+            LEFT JOIN licencias l ON mcv.licencia_id = l.id
+            LEFT JOIN veterinarios v ON l.veterinario_id = v.id
+            ORDER BY mcv.created_at DESC
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error listando ventas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener detalles de una venta
+app.get('/api/admin/mis-clientes/ventas/:id', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    try {
+        const ventaResult = await pool.query(`
+            SELECT 
+                mcv.*,
+                l.clave as licencia_clave,
+                l.tipo as licencia_tipo,
+                l.estado as licencia_estado,
+                l.fecha_activacion,
+                l.fecha_expiracion,
+                v.nombre_veterinario,
+                v.email as veterinario_email
+            FROM mis_clientes_ventas mcv
+            LEFT JOIN licencias l ON mcv.licencia_id = l.id
+            LEFT JOIN veterinarios v ON l.veterinario_id = v.id
+            WHERE mcv.id = $1
+        `, [req.params.id]);
+
+        if (ventaResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Venta no encontrada' });
+        }
+
+        // Obtener historial de pagos
+        const pagosResult = await pool.query(`
+            SELECT * FROM historial_pagos_clientes
+            WHERE cliente_venta_id = $1
+            ORDER BY fecha_pago DESC
+        `, [req.params.id]);
+
+        res.json({
+            venta: ventaResult.rows[0],
+            historial_pagos: pagosResult.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo detalles de venta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar información de venta
+app.put('/api/admin/mis-clientes/ventas/:id', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const {
+        nombre_completo, email, telefono, whatsapp, clinica_nombre,
+        ciudad, provincia, notas, seguimiento
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE mis_clientes_ventas SET
+                nombre_completo = COALESCE($1, nombre_completo),
+                email = COALESCE($2, email),
+                telefono = COALESCE($3, telefono),
+                whatsapp = COALESCE($4, whatsapp),
+                clinica_nombre = COALESCE($5, clinica_nombre),
+                ciudad = COALESCE($6, ciudad),
+                provincia = COALESCE($7, provincia),
+                notas = COALESCE($8, notas),
+                seguimiento = COALESCE($9, seguimiento),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $10
+            RETURNING *
+        `, [nombre_completo, email, telefono, whatsapp, clinica_nombre,
+            ciudad, provincia, notas, seguimiento, req.params.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Venta no encontrada' });
+        }
+
+        res.json({
+            message: 'Venta actualizada exitosamente',
+            venta: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error actualizando venta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Registrar pago adicional (renovación)
+app.post('/api/admin/mis-clientes/registrar-pago', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const {
+        cliente_venta_id, monto, metodo_pago, fecha_pago,
+        comprobante_numero, tipo, concepto, notas
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO historial_pagos_clientes (
+                cliente_venta_id, monto, metodo_pago, fecha_pago,
+                comprobante_numero, tipo, concepto, notas
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [cliente_venta_id, monto, metodo_pago, fecha_pago,
+            comprobante_numero, tipo, concepto, notas]);
+
+        res.json({
+            message: 'Pago registrado exitosamente',
+            pago: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error registrando pago:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener estadísticas de ventas
+app.get('/api/admin/mis-clientes/estadisticas', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    try {
+        // Total de ventas
+        const totalVentas = await pool.query(`
+            SELECT COUNT(*) as total FROM mis_clientes_ventas
+        `);
+
+        // Ingresos totales
+        const ingresosTotales = await pool.query(`
+            SELECT 
+                SUM(monto_pagado) as total,
+                COUNT(*) as cantidad
+            FROM mis_clientes_ventas
+            WHERE monto_pagado IS NOT NULL
+        `);
+
+        // Ingresos del mes actual
+        const ingresosMes = await pool.query(`
+            SELECT 
+                SUM(monto_pagado) as total,
+                COUNT(*) as cantidad
+            FROM mis_clientes_ventas
+            WHERE DATE_TRUNC('month', fecha_pago) = DATE_TRUNC('month', CURRENT_DATE)
+        `);
+
+        // Ventas por método de pago
+        const ventasPorMetodo = await pool.query(`
+            SELECT 
+                metodo_pago,
+                COUNT(*) as cantidad,
+                SUM(monto_pagado) as total
+            FROM mis_clientes_ventas
+            WHERE metodo_pago IS NOT NULL
+            GROUP BY metodo_pago
+        `);
+
+        // Próximas renovaciones (licencias que vencen en 30 días)
+        const proximasRenovaciones = await pool.query(`
+            SELECT 
+                mcv.*,
+                l.fecha_expiracion,
+                EXTRACT(DAY FROM (l.fecha_expiracion - CURRENT_DATE)) as dias_restantes
+            FROM mis_clientes_ventas mcv
+            JOIN licencias l ON mcv.licencia_id = l.id
+            WHERE l.fecha_expiracion IS NOT NULL
+            AND l.fecha_expiracion > CURRENT_DATE
+            AND l.fecha_expiracion <= CURRENT_DATE + INTERVAL '30 days'
+            ORDER BY l.fecha_expiracion ASC
+        `);
+
+        res.json({
+            total_ventas: parseInt(totalVentas.rows[0].total),
+            ingresos_totales: parseFloat(ingresosTotales.rows[0].total || 0),
+            cantidad_pagos: parseInt(ingresosTotales.rows[0].cantidad || 0),
+            ingresos_mes_actual: parseFloat(ingresosMes.rows[0].total || 0),
+            ventas_mes_actual: parseInt(ingresosMes.rows[0].cantidad || 0),
+            ventas_por_metodo: ventasPorMetodo.rows,
+            proximas_renovaciones: proximasRenovaciones.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo estadísticas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar venta
+app.delete('/api/admin/mis-clientes/ventas/:id', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== 'Bearer admin-mundopatas-2024') {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    try {
+        // Primero eliminar pagos relacionados
+        await pool.query(`
+            DELETE FROM historial_pagos_clientes WHERE cliente_venta_id = $1
+        `, [req.params.id]);
+
+        // Luego eliminar la venta
+        const result = await pool.query(`
+            DELETE FROM mis_clientes_ventas WHERE id = $1 RETURNING *
+        `, [req.params.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Venta no encontrada' });
+        }
+
+        res.json({ message: 'Venta eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando venta:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
