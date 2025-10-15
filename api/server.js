@@ -43,8 +43,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Configuración PostgreSQL - Railway
-const { Pool } = require('pg');
-
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
