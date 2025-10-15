@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folleto Comercial - Mundo Patas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none; }
+            body { background: white !important; }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .folleto-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header-section h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .header-section p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+        
+        .section {
+            padding: 40px;
+        }
+        
+        .section-title {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .feature-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        
+        .feature-box i {
+            color: #667eea;
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .price-box {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .price-box .price {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        
+        .price-box .period {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+        
+        .benefit-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .benefit-item:last-child {
+            border-bottom: none;
+        }
+        
+        .benefit-item i {
+            color: #28a745;
+            margin-right: 10px;
+        }
+        
+        .contact-box {
+            background: #667eea;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 15px;
+        }
+        
+        .contact-box a {
+            color: white;
+            text-decoration: none;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .contact-box i {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .testimonial {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-style: italic;
+        }
+        
+        .cta-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            margin: 20px 0;
+            transition: transform 0.3s;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+            color: white;
+        }
+        
+        .comparison-table {
+            margin: 30px 0;
+        }
+        
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+        }
+        
+        .check-icon {
+            color: #28a745;
+            font-size: 20px;
+        }
+        
+        .cross-icon {
+            color: #dc3545;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="folleto-container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1>🐾 MUNDO PATAS</h1>
+            <p>Sistema de Gestión Veterinaria Profesional</p>
+            <p style="font-size: 16px; margin-top: 20px;">
+                <i class="fas fa-globe"></i> sistemamundopatas.com
+            </p>
+        </div>
+
+        <!-- Introducción -->
+        <div class="section">
+            <h2 class="section-title">¿Qué es Mundo Patas?</h2>
+            <p style="font-size: 18px; line-height: 1.8;">
+                <strong>Sistema completo de gestión veterinaria en la nube</strong> que te permite 
+                administrar tu veterinaria de forma profesional, ahorrando tiempo y aumentando tus ingresos.
+            </p>
+        </div>
+
+        <!-- Características Principales -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Características Principales</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="feature-box">
+                        <i class="fas fa-users"></i>
+                        <strong>Gestión de Clientes</strong><br>
+                        <small>Registro completo de dueños y mascotas</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-calendar-check"></i>
+                        <strong>Agenda de Citas</strong><br>
+                        <small>Organiza tu día automáticamente</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-file-medical"></i>
+                        <strong>Historias Clínicas</strong><br>
+                        <small>Digitales y siempre disponibles</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-receipt"></i>
+                        <strong>Facturación</strong><br>
+                        <small>Control total de pagos e ingresos</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="feature-box">
+                        <i class="fas fa-pills"></i>
+                        <strong>Inventario</strong><br>
+                        <small>Control de medicamentos y stock</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-bell"></i>
+                        <strong>Recordatorios</strong><br>
+                        <small>WhatsApp automático a clientes</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-chart-line"></i>
+                        <strong>Reportes</strong><br>
+                        <small>Estadísticas e informes detallados</small>
+                    </div>
+                    <div class="feature-box">
+                        <i class="fas fa-mobile-alt"></i>
+                        <strong>Multi-dispositivo</strong><br>
+                        <small>Celular, tablet o computadora</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Precio -->
+        <div class="section">
+            <h2 class="section-title">Inversión</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="price-box" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                        <div style="font-size: 24px; margin-bottom: 10px;">
+                            <i class="fas fa-seedling"></i> Principiante
+                        </div>
+                        <div class="price">$30.000</div>
+                        <div class="period">ARS por mes</div>
+                        <p style="margin-top: 15px; font-size: 16px; opacity: 0.9;">
+                            Ideal para veterinarias nuevas
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="price-box">
+                        <div style="font-size: 24px; margin-bottom: 10px;">
+                            <i class="fas fa-crown"></i> Establecido
+                        </div>
+                        <div class="price">$50.000</div>
+                        <div class="period">ARS por mes</div>
+                        <p style="margin-top: 15px; font-size: 16px; opacity: 0.9;">
+                            Para veterinarias consolidadas
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 10px;">
+                <strong>Ambos planes incluyen todas las funcionalidades</strong>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Clientes ilimitados
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Usuarios ilimitados
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Almacenamiento en la nube
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Recordatorios automáticos
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Soporte técnico prioritario
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Actualizaciones gratuitas
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Sin costos de instalación
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-check-circle"></i> Sin permanencia mínima
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Beneficios -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">¿Por Qué Elegir Mundo Patas?</h2>
+            
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <i class="fas fa-clock" style="font-size: 48px; color: #667eea;"></i>
+                    <h4 style="margin-top: 15px;">Ahorra Tiempo</h4>
+                    <p>Reduce el tiempo administrativo en un 70%</p>
+                </div>
+                <div class="col-md-3">
+                    <i class="fas fa-heart" style="font-size: 48px; color: #667eea;"></i>
+                    <h4 style="margin-top: 15px;">Mejor Atención</h4>
+                    <p>Historial completo de cada paciente</p>
+                </div>
+                <div class="col-md-3">
+                    <i class="fas fa-dollar-sign" style="font-size: 48px; color: #667eea;"></i>
+                    <h4 style="margin-top: 15px;">Más Ingresos</h4>
+                    <p>Control total de facturación</p>
+                </div>
+                <div class="col-md-3">
+                    <i class="fas fa-star" style="font-size: 48px; color: #667eea;"></i>
+                    <h4 style="margin-top: 15px;">Profesional</h4>
+                    <p>Imagen moderna y tecnológica</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparación -->
+        <div class="section">
+            <h2 class="section-title">Comparación</h2>
+            
+            <table class="table comparison-table">
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th class="text-center">Papel/Excel</th>
+                        <th class="text-center" style="background: #28a745;">Mundo Patas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Acceso remoto</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Recordatorios automáticos</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Backup automático</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Reportes instantáneos</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Multi-dispositivo</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Soporte técnico</td>
+                        <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                        <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Testimonios -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Lo Que Dicen Nuestros Clientes</h2>
+            
+            <div class="testimonial">
+                "Reduje mi tiempo administrativo a la mitad. Ahora puedo dedicar más tiempo a mis pacientes."
+                <br><strong>- Dr. Juan Pérez, Veterinaria San Martín</strong>
+            </div>
+            
+            <div class="testimonial">
+                "Mis clientes están más contentos con los recordatorios automáticos. Ya no se olvidan de las vacunas."
+                <br><strong>- Dra. María González, Clínica Pet Care</strong>
+            </div>
+            
+            <div class="testimonial">
+                "Ahora puedo ver mis reportes desde el celular. Es increíble la facilidad de uso."
+                <br><strong>- Dr. Carlos Rodríguez, Veterinaria Central</strong>
+            </div>
+        </div>
+
+        <!-- Prueba Gratis -->
+        <div class="section text-center">
+            <h2 class="section-title">🎁 Prueba Gratis por 30 Días</h2>
+            
+            <p style="font-size: 18px; margin: 20px 0;">
+                <strong>Sin tarjeta de crédito. Sin compromiso. Sin letra chica.</strong>
+            </p>
+            
+            <div class="row" style="margin-top: 30px;">
+                <div class="col-md-4">
+                    <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div style="font-size: 48px; color: #667eea;">1</div>
+                        <h5>Ingresa</h5>
+                        <p>sistemamundopatas.com</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div style="font-size: 48px; color: #667eea;">2</div>
+                        <h5>Prueba</h5>
+                        <p>Todas las funciones</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div style="font-size: 48px; color: #667eea;">3</div>
+                        <h5>Decide</h5>
+                        <p>Si te gusta, activa</p>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="https://sistemamundopatas.com" class="cta-button">
+                <i class="fas fa-rocket"></i> Probar Gratis Ahora
+            </a>
+        </div>
+
+        <!-- Contacto -->
+        <div class="section">
+            <div class="contact-box">
+                <h2 style="margin-bottom: 30px;">📞 Contáctanos</h2>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <i class="fab fa-whatsapp"></i>
+                        <p><a href="https://wa.me/5492617024193">+54 261 702 4193</a></p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-globe"></i>
+                        <p><a href="https://sistemamundopatas.com">sistemamundopatas.com</a></p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-envelope"></i>
+                        <p><a href="mailto:contacto@mundopatas.com">contacto@mundopatas.com</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Garantía -->
+        <div class="section text-center" style="background: #d4edda; border-top: 4px solid #28a745;">
+            <h3 style="color: #155724; margin-bottom: 20px;">
+                <i class="fas fa-shield-alt"></i> Garantía de Satisfacción
+            </h3>
+            <p style="font-size: 18px; color: #155724;">
+                Si en los primeros 30 días no estás satisfecho,<br>
+                <strong>te devolvemos el 100% de tu dinero. Sin preguntas.</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="section text-center" style="background: #667eea; color: white;">
+            <p style="margin: 0; font-size: 14px;">
+                Mundo Patas - Sistema de Gestión Veterinaria<br>
+                Versión 2025 - Todos los derechos reservados
+            </p>
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="text-center no-print" style="padding: 20px;">
+        <button onclick="window.print()" class="btn btn-primary btn-lg me-2">
+            <i class="fas fa-print"></i> Imprimir Folleto
+        </button>
+        <a href="https://sistemamundopatas.com" class="btn btn-success btn-lg">
+            <i class="fas fa-globe"></i> Ir al Sistema
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

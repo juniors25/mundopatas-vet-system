@@ -267,9 +267,8 @@
                                     <label class="form-label">Plan</label>
                                     <select class="form-select" id="clientPlan" required>
                                         <option value="">Seleccionar plan...</option>
-                                        <option value="basico">Básico - $15,000 ARS/mes</option>
-                                        <option value="profesional">Profesional - $30,000 ARS/mes</option>
-                                        <option value="premium">Premium - $50,000 ARS/mes</option>
+                                        <option value="principiante">Principiante - $30.000 ARS/mes</option>
+                                        <option value="establecido">Establecido - $50.000 ARS/mes</option>
                                     </select>
                                 </div>
                             </div>
@@ -549,9 +548,8 @@
 
         function getPlanPrice(plan) {
             const prices = {
-                'basico': 15000,
-                'profesional': 30000,
-                'premium': 50000
+                'principiante': 30000,
+                'establecido': 50000
             };
             return prices[plan] || 0;
         }
