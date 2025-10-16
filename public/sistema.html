@@ -1075,10 +1075,79 @@
         });
         
         function logout() {
+            // Mostrar modal de confirmación con opciones
+            const modalHtml = `
+                <div class="modal fade" id="logoutModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-warning text-dark">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center py-4">
+                                <i class="fas fa-question-circle fa-4x text-warning mb-3"></i>
+                                <h5>¿Qué deseas hacer?</h5>
+                                <p class="text-muted">Elige una opción para continuar</p>
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-success btn-lg me-2" onclick="volverAIngresar()">
+                                    <i class="fas fa-redo me-2"></i>Volver a Ingresar
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg" onclick="cerrarSesionCompleta()">
+                                    <i class="fas fa-power-off me-2"></i>Cerrar Sesión
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Agregar modal al body si no existe
+            if (!document.getElementById('logoutModal')) {
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('logoutModal'));
+            modal.show();
+        }
+        
+        function volverAIngresar() {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('logoutModal'));
+            if (modal) modal.hide();
+            
+            // Redirigir al login manteniendo el email si existe
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const email = user.email || '';
+            
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            alert('Sesión cerrada exitosamente.');
-            window.location.href = '/';
+            
+            // Redirigir a index con el email en la URL
+            if (email) {
+                window.location.href = `/index.html?email=${encodeURIComponent(email)}`;
+            } else {
+                window.location.href = '/index.html';
+            }
+        }
+        
+        function cerrarSesionCompleta() {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('logoutModal'));
+            if (modal) modal.hide();
+            
+            // Limpiar todo y redirigir al inicio
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            // Mostrar mensaje
+            setTimeout(() => {
+                alert('✅ Sesión cerrada exitosamente. ¡Hasta pronto!');
+                window.location.href = '/';
+            }, 300);
         }
 
         // Función para mostrar modal de activación de licencia

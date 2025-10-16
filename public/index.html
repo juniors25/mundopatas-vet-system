@@ -301,11 +301,11 @@
                     <form id="login-form">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" name="email" required>
+                            <input type="email" class="form-control" id="loginEmail" name="email" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Contraseña</label>
-                            <input type="password" class="form-control" name="password" required>
+                            <input type="password" class="form-control" id="loginPassword" name="password" required>
                         </div>
                     </form>
                 </div>
@@ -372,6 +372,26 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="demo-data.js"></script>
     <script>
+        // Detectar si viene email en la URL y abrir modal automáticamente
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const emailParam = urlParams.get('email');
+            
+            if (emailParam) {
+                // Pre-llenar el email y abrir modal de login
+                document.getElementById('loginEmail').value = emailParam;
+                
+                // Abrir modal automáticamente
+                const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+                modal.show();
+                
+                // Enfocar el campo de contraseña
+                setTimeout(() => {
+                    document.getElementById('loginPassword').focus();
+                }, 500);
+            }
+        });
+        
         function showLoginModal() {
             const modal = new bootstrap.Modal(document.getElementById('loginModal'));
             modal.show();
