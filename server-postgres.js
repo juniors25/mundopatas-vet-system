@@ -2979,7 +2979,13 @@ app.post('/api/admin/veterinarios/:id/generar-licencia', authenticateAdmin, asyn
 app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
     const { licenseKey } = req.body;
     
+    console.log('📝 Intentando validar licencia:', { 
+        veterinarioId: req.user.id, 
+        licenseKey: licenseKey ? licenseKey.substring(0, 20) + '...' : 'undefined' 
+    });
+    
     if (!licenseKey) {
+        console.log('❌ Error: Clave de licencia no proporcionada');
         return res.status(400).json({ error: 'Clave de licencia requerida' });
     }
     
@@ -2991,13 +2997,23 @@ app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
         );
         
         if (vetResult.rows.length === 0) {
+            console.log('❌ Error: Veterinario no encontrado');
             return res.status(404).json({ error: 'Veterinario no encontrado' });
         }
         
         const veterinario = vetResult.rows[0];
+        console.log('👤 Veterinario encontrado:', { 
+            id: req.user.id, 
+            licencia_activa: veterinario.licencia_activa,
+            tipo_cuenta: veterinario.tipo_cuenta 
+        });
         
         if (veterinario.licencia_activa) {
-            return res.status(400).json({ error: 'Ya tienes una licencia activa' });
+            console.log('⚠️  Veterinario ya tiene licencia activa');
+            return res.status(400).json({ 
+                error: 'Ya tienes una licencia activa',
+                details: `Tu cuenta es ${veterinario.tipo_cuenta}. Si necesitas cambiar de plan, contacta a soporte.`
+            });
         }
         
         // Verificar que la clave existe y está disponible
@@ -3007,18 +3023,32 @@ app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
         );
         
         if (licenciaResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Clave de licencia inválida' });
+            console.log('❌ Error: Clave de licencia no existe en la base de datos');
+            return res.status(404).json({ error: 'Clave de licencia inválida. Verifica que esté escrita correctamente.' });
         }
         
         const licencia = licenciaResult.rows[0];
+        console.log('🔑 Licencia encontrada:', { 
+            id: licencia.id, 
+            tipo: licencia.tipo, 
+            estado: licencia.estado,
+            activa: licencia.activa,
+            veterinario_id: licencia.veterinario_id
+        });
         
         if (licencia.estado !== 'disponible' || licencia.activa) {
-            return res.status(400).json({ error: 'Esta licencia ya ha sido activada' });
+            console.log('⚠️  Licencia ya activada o no disponible');
+            return res.status(400).json({ 
+                error: 'Esta licencia ya ha sido activada',
+                details: 'Esta clave ya fue utilizada. Contacta a soporte para obtener una nueva licencia.'
+            });
         }
         
         // Activar la licencia
         const fechaExpiracion = new Date();
         fechaExpiracion.setFullYear(fechaExpiracion.getFullYear() + 1); // 1 año desde hoy
+        
+        console.log('✅ Activando licencia...');
         
         await pool.query(`
             UPDATE licencias SET
@@ -3040,6 +3070,8 @@ app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
             WHERE id = $2
         `, [licencia.tipo, req.user.id]);
         
+        console.log('🎉 Licencia activada exitosamente para veterinario:', req.user.id);
+        
         res.json({
             message: '¡Licencia activada exitosamente!',
             plan: licencia.tipo,
@@ -3047,7 +3079,7 @@ app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
             fecha_expiracion: fechaExpiracion
         });
     } catch (error) {
-        console.error('Error activando licencia:', error);
+        console.error('❌ Error activando licencia:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
