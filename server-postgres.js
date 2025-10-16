@@ -2453,8 +2453,8 @@ app.get('/api/admin/veterinarios', async (req, res) => {
     
     try {
         const result = await pool.query(`
-            SELECT id, nombre_veterinario, email, telefono, tipo_cuenta, 
-                   licencia_activa, created_at, updated_at
+            SELECT id, nombre_veterinario, nombre_veterinaria, email, telefono, 
+                   direccion, tipo_cuenta, licencia_activa, fecha_expiracion_demo, created_at
             FROM veterinarios
             ORDER BY created_at DESC
         `);
