@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Clientes Registrados - MUNDO PATAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5530;
+            --secondary-color: #4a7c59;
+            --accent-color: #8fbc8f;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .client-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 5px solid #28a745;
+            transition: all 0.3s ease;
+        }
+        
+        .client-card:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .client-card.demo {
+            border-left-color: #ffc107;
+        }
+        
+        .client-card.premium {
+            border-left-color: #28a745;
+        }
+        
+        .badge-demo {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .badge-premium {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-generate-license {
+            background: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-generate-license:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-generate-license:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-users me-3"></i>Panel de Clientes Registrados</h1>
+                    <p class="mb-0">Gestión de Veterinarios - MUNDO PATAS</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                    <h2 id="totalVets">0</h2>
+                    <p class="text-muted mb-0">Total Registrados</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-star fa-3x text-success mb-3"></i>
+                    <h2 id="premiumVets">0</h2>
+                    <p class="text-muted mb-0">Clientes PREMIUM</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h2 id="demoVets">0</h2>
+                    <p class="text-muted mb-0">Cuentas DEMO</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                    <h2 id="conversionRate">0%</h2>
+                    <p class="text-muted mb-0">Tasa Conversión</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="searchInput" placeholder="🔍 Buscar por nombre, email o clínica...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterType">
+                                    <option value="all">Todos</option>
+                                    <option value="DEMO">Solo DEMO</option>
+                                    <option value="PREMIUM">Solo PREMIUM</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="sortBy">
+                                    <option value="recent">Más Recientes</option>
+                                    <option value="oldest">Más Antiguos</option>
+                                    <option value="name">Por Nombre</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Clientes -->
+        <div class="row">
+            <div class="col-md-12">
+                <div id="clientsList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-3">Cargando clientes registrados...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Generar Licencia -->
+    <div class="modal fade" id="generateLicenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-key me-2"></i>Generar Licencia PREMIUM</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="clientInfo" class="mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Licencia</label>
+                        <select class="form-select" id="licenseType">
+                            <option value="PREMIUM">PREMIUM (1 año)</option>
+                            <option value="BASIC">BASIC (6 meses)</option>
+                            <option value="ENTERPRISE">ENTERPRISE (2 años)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notas (opcional)</label>
+                        <textarea class="form-control" id="licenseNotes" rows="3" placeholder="Ej: Pago confirmado - $50.000 ARS"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        La licencia se generará y activará automáticamente para este cliente.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="confirmGenerateLicense()">
+                        <i class="fas fa-check me-2"></i>Generar y Activar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Mostrar Licencia Generada -->
+    <div class="modal fade" id="licenseGeneratedModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>¡Licencia Generada!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <h5>Licencia activada exitosamente</h5>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Clave de Licencia:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="generatedKey" readonly>
+                            <button class="btn btn-outline-secondary" onclick="copyLicenseKey()">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="clientInfoGenerated"></div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Envía esta clave al cliente por WhatsApp o Email.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const ADMIN_TOKEN = 'admin-mundopatas-2024';
+        let allVeterinarians = [];
+        let selectedVetId = null;
+
+        // Cargar veterinarios al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVeterinarians();
+            
+            // Event listeners para filtros
+            document.getElementById('searchInput').addEventListener('input', filterClients);
+            document.getElementById('filterType').addEventListener('change', filterClients);
+            document.getElementById('sortBy').addEventListener('change', filterClients);
+        });
+
+        async function loadVeterinarians() {
+            try {
+                const response = await fetch('/api/admin/veterinarios', {
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar veterinarios');
+                }
+
+                allVeterinarians = await response.json();
+                updateStats();
+                displayClients(allVeterinarians);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('clientsList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error al cargar los clientes. Verifica tu conexión.
+                    </div>
+                `;
+            }
+        }
+
+        function updateStats() {
+            const total = allVeterinarians.length;
+            const premium = allVeterinarians.filter(v => v.licencia_activa).length;
+            const demo = total - premium;
+            const conversion = total > 0 ? Math.round((premium / total) * 100) : 0;
+
+            document.getElementById('totalVets').textContent = total;
+            document.getElementById('premiumVets').textContent = premium;
+            document.getElementById('demoVets').textContent = demo;
+            document.getElementById('conversionRate').textContent = `${conversion}%`;
+        }
+
+        function displayClients(clients) {
+            const container = document.getElementById('clientsList');
+            
+            if (clients.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                        <h5>No hay clientes registrados aún</h5>
+                        <p>Los veterinarios que se registren aparecerán aquí.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = clients.map(vet => `
+                <div class="client-card ${vet.licencia_activa ? 'premium' : 'demo'}">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-1">
+                                <i class="fas fa-clinic-medical me-2"></i>
+                                ${vet.nombre_veterinaria || 'Sin nombre de clínica'}
+                            </h5>
+                            <p class="mb-1">
+                                <i class="fas fa-user-md me-2"></i>
+                                <strong>${vet.nombre_veterinario}</strong>
+                            </p>
+                            <p class="mb-1 text-muted">
+                                <i class="fas fa-envelope me-2"></i>${vet.email}
+                            </p>
+                            ${vet.telefono ? `<p class="mb-0 text-muted"><i class="fas fa-phone me-2"></i>${vet.telefono}</p>` : ''}
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <span class="badge ${vet.licencia_activa ? 'badge-premium' : 'badge-demo'} fs-6">
+                                ${vet.tipo_cuenta || 'DEMO'}
+                            </span>
+                            <p class="text-muted small mt-2 mb-0">
+                                Registrado: ${new Date(vet.created_at).toLocaleDateString('es-AR')}
+                            </p>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            ${vet.licencia_activa ? `
+                                <button class="btn btn-sm btn-success" disabled>
+                                    <i class="fas fa-check-circle me-2"></i>Licencia Activa
+                                </button>
+                            ` : `
+                                <button class="btn btn-generate-license" onclick="showGenerateLicenseModal(${vet.id})">
+                                    <i class="fas fa-key me-2"></i>Generar Licencia
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterClients() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filterType = document.getElementById('filterType').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            let filtered = allVeterinarians.filter(vet => {
+                const matchesSearch = 
+                    vet.nombre_veterinario.toLowerCase().includes(searchTerm) ||
+                    vet.email.toLowerCase().includes(searchTerm) ||
+                    (vet.nombre_veterinaria && vet.nombre_veterinaria.toLowerCase().includes(searchTerm));
+
+                const matchesType = 
+                    filterType === 'all' ||
+                    (filterType === 'DEMO' && !vet.licencia_activa) ||
+                    (filterType === 'PREMIUM' && vet.licencia_activa);
+
+                return matchesSearch && matchesType;
+            });
+
+            // Ordenar
+            if (sortBy === 'recent') {
+                filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            } else if (sortBy === 'oldest') {
+                filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            } else if (sortBy === 'name') {
+                filtered.sort((a, b) => a.nombre_veterinario.localeCompare(b.nombre_veterinario));
+            }
+
+            displayClients(filtered);
+        }
+
+        function showGenerateLicenseModal(vetId) {
+            selectedVetId = vetId;
+            const vet = allVeterinarians.find(v => v.id === vetId);
+            
+            document.getElementById('clientInfo').innerHTML = `
+                <div class="alert alert-primary">
+                    <h6><i class="fas fa-user me-2"></i>${vet.nombre_veterinario}</h6>
+                    <p class="mb-0"><i class="fas fa-envelope me-2"></i>${vet.email}</p>
+                    ${vet.nombre_veterinaria ? `<p class="mb-0"><i class="fas fa-clinic-medical me-2"></i>${vet.nombre_veterinaria}</p>` : ''}
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('generateLicenseModal'));
+            modal.show();
+        }
+
+        async function confirmGenerateLicense() {
+            const tipo = document.getElementById('licenseType').value;
+            const notas = document.getElementById('licenseNotes').value;
+
+            try {
+                const response = await fetch(`/api/admin/veterinarios/${selectedVetId}/generar-licencia`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tipo, notas })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al generar licencia');
+                }
+
+                // Cerrar modal de generación
+                bootstrap.Modal.getInstance(document.getElementById('generateLicenseModal')).hide();
+
+                // Mostrar modal con la licencia generada
+                document.getElementById('generatedKey').value = data.licencia.clave;
+                document.getElementById('clientInfoGenerated').innerHTML = `
+                    <p><strong>Cliente:</strong> ${data.veterinario.nombre}</p>
+                    <p><strong>Email:</strong> ${data.veterinario.email}</p>
+                    <p><strong>Plan:</strong> ${data.veterinario.tipo_cuenta}</p>
+                    <p><strong>Válida hasta:</strong> ${new Date(data.licencia.fecha_expiracion).toLocaleDateString('es-AR')}</p>
+                `;
+
+                const successModal = new bootstrap.Modal(document.getElementById('licenseGeneratedModal'));
+                successModal.show();
+
+                // Recargar lista
+                setTimeout(() => {
+                    loadVeterinarians();
+                }, 2000);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function copyLicenseKey() {
+            const keyInput = document.getElementById('generatedKey');
+            keyInput.select();
+            document.execCommand('copy');
+            
+            alert('¡Clave copiada al portapapeles!');
+        }
+    </script>
+</body>
+</html>

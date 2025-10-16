@@ -2882,6 +2882,99 @@ app.get('/api/admin/licencias', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Endpoint para listar todos los veterinarios registrados (ADMIN)
+app.get('/api/admin/veterinarios', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                id,
+                nombre_veterinario,
+                nombre_veterinaria,
+                email,
+                telefono,
+                direccion,
+                licencia_activa,
+                tipo_cuenta,
+                fecha_expiracion_demo,
+                created_at
+            FROM veterinarios
+            ORDER BY created_at DESC
+        `);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo veterinarios:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Endpoint para generar y asignar licencia directamente a un veterinario (ADMIN)
+app.post('/api/admin/veterinarios/:id/generar-licencia', authenticateAdmin, async (req, res) => {
+    const veterinarioId = parseInt(req.params.id);
+    const { tipo = 'PREMIUM', notas = '' } = req.body;
+    
+    try {
+        // Verificar que el veterinario existe
+        const vetResult = await pool.query(
+            'SELECT * FROM veterinarios WHERE id = $1',
+            [veterinarioId]
+        );
+        
+        if (vetResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+        
+        const veterinario = vetResult.rows[0];
+        
+        // Verificar si ya tiene una licencia activa
+        if (veterinario.licencia_activa) {
+            return res.status(400).json({ 
+                error: 'Este veterinario ya tiene una licencia activa',
+                veterinario: {
+                    nombre: veterinario.nombre_veterinario,
+                    email: veterinario.email
+                }
+            });
+        }
+        
+        // Generar clave única
+        const year = new Date().getFullYear();
+        const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const timestamp = Date.now().toString(36).toUpperCase();
+        const clave = `MUNDOPATAS-${year}-${random}-${timestamp}`;
+        
+        // Crear la licencia
+        const licenciaResult = await pool.query(`
+            INSERT INTO licencias (clave, tipo, estado, notas, veterinario_id, fecha_activacion, fecha_expiracion, activa)
+            VALUES ($1, $2, 'activa', $3, $4, NOW(), NOW() + INTERVAL '1 year', true)
+            RETURNING *
+        `, [clave, tipo, `${notas} - Generada para: ${veterinario.nombre_veterinario} (${veterinario.email})`, veterinarioId]);
+        
+        // Actualizar el veterinario
+        await pool.query(`
+            UPDATE veterinarios SET
+                licencia_activa = true,
+                tipo_cuenta = $1,
+                fecha_expiracion_demo = NULL
+            WHERE id = $2
+        `, [tipo, veterinarioId]);
+        
+        res.json({
+            message: 'Licencia generada y activada exitosamente',
+            licencia: licenciaResult.rows[0],
+            veterinario: {
+                id: veterinario.id,
+                nombre: veterinario.nombre_veterinario,
+                email: veterinario.email,
+                tipo_cuenta: tipo
+            }
+        });
+    } catch (error) {
+        console.error('Error generando licencia para veterinario:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Endpoint para validar y activar licencia
 app.post('/api/validate-license-key', authenticateToken, async (req, res) => {
     const { licenseKey } = req.body;
