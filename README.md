@@ -2,6 +2,8 @@
 
 Una aplicación web completa para la gestión de clínicas veterinarias que permite registrar clientes, mascotas, consultas médicas, análisis y generar informes detallados. **Incluye sistema automático de notificaciones** para alertas de alimento y recordatorios.
 
+**🔗 Panel de Administración:** [https://sistemamundopatas.com/admin-panel.html](https://sistemamundopatas.com/admin-panel.html)
+
 ## ✨ Características Principales
 
 ### 🐾 Gestión de Mascotas
