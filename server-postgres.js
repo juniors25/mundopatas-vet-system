@@ -61,7 +61,9 @@ initializeDatabase().catch(console.error);
 app.get('/api/app-config', (req, res) => {
     res.json({
         appName: "MUNDO PATAS",
-        version: "2.0.0",
+        version: "2.1.0-licencias",
+        build: "51bfe88",
+        licenseSystemEnabled: true,
         environment: process.env.NODE_ENV || "development",
         mode: "production",
         features: {

@@ -1,0 +1,12 @@
+{
+  "version": "2.1.0",
+  "build": "51bfe88",
+  "features": [
+    "Sistema de licencias completo",
+    "Endpoint /api/validate-license-key",
+    "Endpoint /api/admin/licencias/generar",
+    "Endpoint /api/admin/licencias"
+  ],
+  "timestamp": "2025-10-15T22:10:00Z",
+  "status": "production"
+}
