@@ -1,6 +1,6 @@
 {
   "name": "veterinaria-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sistema de gestión veterinaria con registro de mascotas, informes y análisis",
   "main": "server-postgres.js",
   "scripts": {
