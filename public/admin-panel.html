@@ -310,7 +310,11 @@
         // Cargar clientes
         async function loadClients() {
             try {
-                const response = await fetch('/api/admin/clients');
+                const response = await fetch('/api/admin/clients', {
+                    headers: {
+                        'Authorization': 'Bearer admin-mundopatas-2024'
+                    }
+                });
                 if (response.ok) {
                     clients = await response.json();
                     renderClients();

@@ -2882,6 +2882,46 @@ app.get('/api/admin/licencias', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Endpoint para obtener clientes del panel de administración
+app.get('/api/admin/clients', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                v.id,
+                v.nombre_veterinario as veterinario,
+                v.email,
+                v.telefono,
+                v.direccion,
+                v.tipo_cuenta as plan,
+                v.licencia_activa,
+                v.created_at as "fechaInicio",
+                CASE 
+                    WHEN v.licencia_activa = true THEN 'activo'
+                    ELSE 'inactivo'
+                END as estado,
+                l.clave as "licenseKey",
+                l.fecha_expiracion as "fechaVencimiento",
+                CASE 
+                    WHEN v.tipo_cuenta = 'DEMO' THEN 0
+                    WHEN v.tipo_cuenta = 'BASICO' THEN 30000
+                    WHEN v.tipo_cuenta = 'PROFESIONAL' THEN 50000
+                    WHEN v.tipo_cuenta = 'PREMIUM' THEN 50000
+                    ELSE 0
+                END as "ingresoMensual",
+                COALESCE(v.nombre_veterinaria, 'Veterinaria ' || v.nombre_veterinario) as veterinaria
+            FROM veterinarios v
+            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.activa = true
+            WHERE v.tipo_cuenta != 'DEMO'
+            ORDER BY v.created_at DESC
+        `);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo clientes:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Endpoint para listar todos los veterinarios registrados (ADMIN)
 app.get('/api/admin/veterinarios', authenticateAdmin, async (req, res) => {
     try {
