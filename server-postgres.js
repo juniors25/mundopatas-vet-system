@@ -235,74 +235,188 @@ app.get('/api/mascotas', authenticateToken, async (req, res) => {
 });
 
 // RUTAS DE CONSULTAS
+
+// Obtener todas las consultas del veterinario autenticado
+app.get('/api/consultas', authenticateToken, async (req, res) => {
+    console.log(`📋 Obteniendo consultas para el veterinario ID: ${req.user.id}`);
+    
+    try {
+        const result = await pool.query(`
+            SELECT c.*, 
+                   m.nombre as nombre_mascota, m.especie,
+                   cl.nombre as nombre_cliente, cl.apellido as apellido_cliente
+            FROM consultas c
+            JOIN mascotas m ON c.mascota_id = m.id
+            JOIN clientes cl ON c.cliente_id = cl.id
+            WHERE c.veterinario_id = $1
+            ORDER BY c.fecha_consulta DESC
+            LIMIT 100
+        `, [req.user.id]);
+        
+        console.log(`✅ Se encontraron ${result.rows.length} consultas`);
+        
+        res.json({
+            success: true,
+            count: result.rows.length,
+            consultas: result.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ Error al obtener consultas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al obtener las consultas',
+            message: 'Ocurrió un error al intentar recuperar las consultas',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 app.post('/api/consultas', authenticateToken, async (req, res) => {
+    console.log('📝 Datos recibidos para nueva consulta:', req.body);
+    
+    // Validar campos obligatorios
+    const { mascota_id, motivo, observaciones = '' } = req.body;
+    
+    if (!mascota_id) {
+        console.error('❌ Error: mascota_id es obligatorio');
+        return res.status(400).json({ error: 'El ID de la mascota es obligatorio' });
+    }
+    
+    if (!motivo) {
+        console.error('❌ Error: motivo es obligatorio');
+        return res.status(400).json({ error: 'El motivo de la consulta es obligatorio' });
+    }
+    
+    // Desestructurar el resto de los campos con valores por defecto
     const { 
-        mascota_id, motivo, observaciones,
         // Semiología y examen físico
-        estado_corporal, manto_piloso, tiempo_llenado_capilar,
-        frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-        ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-        examen_otico, examen_neurologico, examen_aparato_locomotor,
+        estado_corporal = null, manto_piloso = null, tiempo_llenado_capilar = null,
+        frecuencia_cardiaca = null, frecuencia_respiratoria = null, peso = null, 
+        temperatura = null, ganglios_linfaticos = null, tonalidad_mucosa = null, 
+        examen_bucal = null, examen_ocular = null, examen_otico = null, 
+        examen_neurologico = null, examen_aparato_locomotor = null,
         // Estudios complementarios
-        tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-        electrocardiograma, medicion_presion_arterial, ecocardiograma,
+        tipo_analisis = null, fecha_analisis = null, resultados_analisis = null, 
+        archivo_analisis_url = null, electrocardiograma = null, 
+        medicion_presion_arterial = null, ecocardiograma = null,
         // Desparasitación
-        desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
+        desparasitacion = null, fecha_desparasitacion = null, 
+        producto_desparasitacion = null, proxima_desparasitacion = null,
         // Diagnóstico
-        diagnostico_presuntivo, diagnostico_final,
+        diagnostico_presuntivo = null, diagnostico_final = null,
         // Tratamiento
-        medicamento, dosis, intervalo, tratamiento_inyectable
+        medicamento = null, dosis = null, intervalo = null, tratamiento_inyectable = null
     } = req.body;
 
     try {
-        // Verificar que la mascota pertenece al veterinario
-        const mascotaCheck = await pool.query(`
-            SELECT m.id, m.cliente_id 
-            FROM mascotas m 
-            JOIN clientes c ON m.cliente_id = c.id 
-            WHERE m.id = $1 AND c.veterinario_id = $2
-        `, [mascota_id, req.user.id]);
+        console.log(`🔍 Verificando mascota ID: ${mascota_id} para el veterinario ID: ${req.user.id}`);
         
-        if (mascotaCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'No tienes permiso para agregar consultas a esta mascota' });
+        // Verificar que la mascota pertenece al veterinario
+        let mascotaCheck;
+        try {
+            mascotaCheck = await pool.query(`
+                SELECT m.id, m.cliente_id, m.nombre as nombre_mascota, 
+                       c.nombre as nombre_cliente, c.apellido as apellido_cliente
+                FROM mascotas m 
+                JOIN clientes c ON m.cliente_id = c.id 
+                WHERE m.id = $1 AND c.veterinario_id = $2
+            `, [mascota_id, req.user.id]);
+            
+            console.log(`🔎 Resultado de la búsqueda de mascota:`, mascotaCheck.rows[0] || 'No encontrada');
+            
+            if (mascotaCheck.rows.length === 0) {
+                console.error(`❌ Error: La mascota con ID ${mascota_id} no existe o no pertenece al veterinario`);
+                return res.status(403).json({ 
+                    error: 'No tienes permiso para agregar consultas a esta mascota',
+                    details: 'La mascota no existe o no pertenece a tu lista de pacientes'
+                });
+            }
+        } catch (dbError) {
+            console.error('❌ Error al verificar la mascota en la base de datos:', dbError);
+            return res.status(500).json({ 
+                error: 'Error al verificar la mascota',
+                details: dbError.message
+            });
         }
 
-        const cliente_id = mascotaCheck.rows[0].cliente_id;
-
-        const result = await pool.query(
-            `INSERT INTO consultas (
-                veterinario_id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                $29, $30, $31, $32, $33, $34, $35, $36
-            ) RETURNING *`,
-            [
-                req.user.id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones
-            ]
-        );
-
-        res.json({ message: 'Consulta registrada exitosamente', consulta: result.rows[0] });
+        const clienteInfo = mascotaCheck.rows[0];
+        const cliente_id = clienteInfo.cliente_id;
+        
+        console.log(`📝 Intentando registrar consulta para mascota: ${clienteInfo.nombre_mascota} (ID: ${mascota_id})`);
+        
+        try {
+            const result = await pool.query(
+                `INSERT INTO consultas (
+                    veterinario_id, cliente_id, mascota_id, motivo,
+                    estado_corporal, manto_piloso, tiempo_llenado_capilar,
+                    frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
+                    ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
+                    examen_otico, examen_neurologico, examen_aparato_locomotor,
+                    tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
+                    electrocardiograma, medicion_presion_arterial, ecocardiograma,
+                    desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
+                    diagnostico_presuntivo, diagnostico_final,
+                    medicamento, dosis, intervalo, tratamiento_inyectable,
+                    observaciones, fecha_consulta, estado
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+                    $29, $30, $31, $32, $33, $34, $35, $36, NOW(), 'completada'
+                ) RETURNING *`,
+                [
+                    req.user.id, cliente_id, mascota_id, motivo,
+                    estado_corporal, manto_piloso, tiempo_llenado_capilar,
+                    frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
+                    ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
+                    examen_otico, examen_neurologico, examen_aparato_locomotor,
+                    tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
+                    electrocardiograma, medicion_presion_arterial, ecocardiograma,
+                    desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
+                    diagnostico_presuntivo, diagnostico_final,
+                    medicamento, dosis, intervalo, tratamiento_inyectable,
+                    observaciones
+                ]
+            );
+            
+            console.log('✅ Consulta registrada exitosamente:', result.rows[0]);
+            
+            // Enviar respuesta exitosa con más detalles
+            res.status(201).json({ 
+                success: true,
+                message: 'Consulta registrada exitosamente',
+                consulta: result.rows[0],
+                mascota: {
+                    id: mascota_id,
+                    nombre: clienteInfo.nombre_mascota
+                },
+                cliente: {
+                    id: cliente_id,
+                    nombre: clienteInfo.nombre_cliente,
+                    apellido: clienteInfo.apellido_cliente
+                }
+            });
+            
+        } catch (dbError) {
+            console.error('❌ Error al insertar la consulta en la base de datos:', dbError);
+            
+            // Verificar si es un error de restricción de clave foránea
+            if (dbError.code === '23503') { // Código para violación de clave foránea
+                return res.status(400).json({
+                    success: false,
+                    error: 'Error de referencia',
+                    message: 'Uno o más IDs proporcionados no existen en la base de datos',
+                    details: dbError.detail
+                });
+            }
+            
+            // Para otros errores de base de datos
+            res.status(500).json({
+                success: false,
+                error: 'Error al guardar la consulta',
+                message: 'Ocurrió un error al intentar guardar la consulta',
+                details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+            });
+        }
     } catch (error) {
         console.error('Error registrando consulta:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
