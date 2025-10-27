@@ -1,0 +1,304 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API de Mundo Patas - Sistema de Gestión Veterinaria",
+    "version": "1.0.0",
+    "description": "API para el sistema de gestión veterinaria Mundo Patas. Permite la gestión de clientes, mascotas, historias clínicas y más.",
+    "contact": {
+      "email": "soporte@mundopatas.com"
+    },
+    "license": {
+      "name": "Propietario",
+      "url": "https://sistemamundopatas.com/terminos"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://sistemamundopatas.com/api",
+      "description": "Servidor de producción"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Servidor de desarrollo local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Clientes",
+      "description": "Operaciones relacionadas con clientes"
+    },
+    {
+      "name": "Mascotas",
+      "description": "Operaciones relacionadas con mascotas"
+    },
+    {
+      "name": "Autenticación",
+      "description": "Operaciones de autenticación y gestión de usuarios"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Cliente": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Juan"
+          },
+          "apellido": {
+            "type": "string",
+            "example": "Pérez"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "juan.perez@ejemplo.com"
+          },
+          "telefono": {
+            "type": "string",
+            "example": "0981123456"
+          },
+          "direccion": {
+            "type": "string",
+            "example": "Av. Principal 123"
+          },
+          "segmento_nombre": {
+            "type": "string",
+            "example": "Clientes frecuentes"
+          },
+          "segmento_color": {
+            "type": "string",
+            "example": "#2ecc71"
+          },
+          "total_mascotas": {
+            "type": "integer",
+            "example": 2
+          },
+          "total_interacciones": {
+            "type": "integer",
+            "example": 5
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ClienteCompleto": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Cliente"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "direcciones": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Direccion"
+                }
+              },
+              "etiquetas": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Etiqueta"
+                }
+              },
+              "mascotas": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Mascota"
+                }
+              },
+              "interacciones": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Interaccion"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Direccion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "tipo": {
+            "type": "string",
+            "example": "casa"
+          },
+          "direccion": {
+            "type": "string",
+            "example": "Calle Falsa 123"
+          },
+          "ciudad": {
+            "type": "string",
+            "example": "Asunción"
+          },
+          "departamento": {
+            "type": "string",
+            "example": "Central"
+          },
+          "pais": {
+            "type": "string",
+            "example": "Paraguay"
+          },
+          "referencia": {
+            "type": "string",
+            "example": "Entre calles 1 y 2"
+          },
+          "es_principal": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "Etiqueta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "nombre": {
+            "type": "string",
+            "example": "VIP"
+          },
+          "color": {
+            "type": "string",
+            "example": "#ffcc00"
+          }
+        }
+      },
+      "Mascota": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Firulais"
+          },
+          "especie": {
+            "type": "string",
+            "example": "Perro"
+          },
+          "raza": {
+            "type": "string",
+            "example": "Labrador"
+          },
+          "edad": {
+            "type": "integer",
+            "example": 3
+          },
+          "sexo": {
+            "type": "string",
+            "enum": ["Macho", "Hembra"],
+            "example": "Macho"
+          },
+          "color": {
+            "type": "string",
+            "example": "Dorado"
+          },
+          "observaciones": {
+            "type": "string",
+            "example": "Alérgico a la penicilina"
+          }
+        }
+      },
+      "Interaccion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "tipo": {
+            "type": "string",
+            "example": "llamada"
+          },
+          "descripcion": {
+            "type": "string",
+            "example": "Recordatorio de vacunación anual"
+          },
+          "fecha_hora": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "veterinario_nombre": {
+            "type": "string",
+            "example": "Dr. Juan Pérez"
+          },
+          "seguimiento_necesario": {
+            "type": "boolean",
+            "example": true
+          },
+          "fecha_seguimiento": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "realizada": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Paginacion": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 42
+          },
+          "pagina": {
+            "type": "integer",
+            "example": 1
+          },
+          "por_pagina": {
+            "type": "integer",
+            "example": 10
+          },
+          "total_paginas": {
+            "type": "integer",
+            "example": 5
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Error al procesar la solicitud"
+          },
+          "error": {
+            "type": "string",
+            "example": "Mensaje detallado del error (solo en desarrollo)"
+          }
+        }
+      }
+    }
+  },
+  "paths": {}
+}

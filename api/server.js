@@ -6,6 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const { Pool } = require('pg');
 
+// Importar rutas
+const clienteRoutes = require('../routes/clienteRoutes');
+const historiaClinicaRoutes = require('../routes/historiaClinicaRoutes');
+const inventarioRoutes = require('../routes/inventarioRoutes');
+
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
 
@@ -136,22 +141,59 @@ async function initializeDatabase() {
 // Inicializar al arrancar
 initializeDatabase();
 
+// Rutas de la API
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/historias-clinicas', historiaClinicaRoutes);
+app.use('/api/inventario', inventarioRoutes);
+
+// Middleware para adjuntar la conexión a la base de datos a cada solicitud
+app.use((req, res, next) => {
+    req.db = pool; // Adjuntar el pool de conexiones a cada solicitud
+    next();
+});
+
 // Middleware de autenticación
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ error: 'Token de acceso requerido' });
+    // Excluir rutas públicas
+    const publicPaths = ['/api/login', '/api/register', '/api/demo-login', '/api/validate-access-key'];
+    if (publicPaths.includes(req.path)) {
+        return next();
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Token inválido' });
+    // Para rutas de API que requieren autenticación
+    if (req.path.startsWith('/api/')) {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'Token de acceso requerido' });
         }
-        req.user = user;
+
+        try {
+            const user = jwt.verify(token, JWT_SECRET);
+            req.user = user;
+            
+            // Si es el token de admin, adjuntar rol
+            if (token === 'admin-mundopatas-2024') {
+                req.user.role = 'admin';
+            }
+            
+            next();
+        } catch (error) {
+            return res.status(403).json({ error: 'Token inválido o expirado' });
+        }
+    } else {
         next();
-    });
+    }
+}
+
+// Middleware para verificar rol de administrador
+function checkAdminRole(req, res, next) {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ error: 'Acceso denegado. Se requieren privilegios de administrador.' });
+    }
 }
 
 // RUTAS DE AUTENTICACIÓN

@@ -93,7 +93,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         // Insertar nuevo veterinario
         const result = await pool.query(
-            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, nombre_veterinario',
+            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
             [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion]
         );
 
@@ -106,7 +106,13 @@ app.post('/api/auth/register', async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
-                nombre: user.nombre_veterinario
+                nombre: user.nombre_veterinario,
+                nombre_veterinario: user.nombre_veterinario,
+                nombre_veterinaria: user.nombre_veterinaria,
+                telefono: user.telefono,
+                direccion: user.direccion,
+                tipo_cuenta: user.tipo_cuenta,
+                licencia_activa: user.licencia_activa
             }
         });
     } catch (error) {
@@ -140,7 +146,13 @@ app.post('/api/login', async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
-                nombre: user.nombre_veterinario
+                nombre: user.nombre_veterinario,
+                nombre_veterinario: user.nombre_veterinario,
+                nombre_veterinaria: user.nombre_veterinaria,
+                telefono: user.telefono,
+                direccion: user.direccion,
+                tipo_cuenta: user.tipo_cuenta,
+                licencia_activa: user.licencia_activa
             }
         });
     } catch (error) {

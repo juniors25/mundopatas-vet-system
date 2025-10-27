@@ -14,14 +14,30 @@ Una aplicación web completa para la gestión de clínicas veterinarias que perm
 - **Cálculo automático de días restantes**
 
 ### 👥 Gestión de Clientes
-- Registro de propietarios con datos de contacto
+- **Búsqueda avanzada** con múltiples filtros (nombre, apellido, email, teléfono, dirección)
+- **Segmentación de clientes** para marketing dirigido
+- **Sistema de referidos** con seguimiento
+- **Registro completo** de propietarios con datos de contacto extendidos
 - Historial de mascotas por cliente
-- Portal del paciente para consulta de información
+- **Múltiples direcciones** por cliente
+- **Etiquetas personalizables** para mejor organización
+- **Portal del paciente** para consulta de información
+- **Registro de interacciones** con seguimiento de comunicación
 
-### 🩺 Consultas Médicas
-- Registro de consultas veterinarias
-- Diagnósticos y tratamientos
-- Control de peso y temperatura
+### 🩺 Gestión de Historias Clínicas
+- **Historial clínico completo** con seguimiento de todas las consultas
+- **Tipos de consulta** personalizables con colores para fácil identificación
+- **Archivos adjuntos** para guardar radiografías, análisis y documentos
+- **Plantillas** para agilizar el registro de consultas frecuentes
+- **Vacunación** con registro de lotes y fechas de próxima dosis
+- **Desparasitaciones** con seguimiento de productos y fechas
+- **Recetas médicas** con gestión de medicamentos y dosis
+- **Estadísticas** de consultas por tipo y período
+- **Búsqueda avanzada** en el historial clínico
+- **Exportación** de historias clínicas en formato PDF
+- **Firma digital** para validación de documentos
+- **Notas de evolución** con seguimiento de cambios
+- **Alertas** para vacunas y controles pendientes
 - Observaciones médicas
 
 ### 🧪 Análisis y Estudios
@@ -65,6 +81,55 @@ Una aplicación web completa para la gestión de clínicas veterinarias que perm
 - **Automatización**: node-cron, Task Scheduler (Windows)
 - **Autenticación**: JWT (JSON Web Tokens)
 - **Seguridad**: bcrypt para passwords
+
+## 🛠️ Nuevas Mejoras
+
+### 🔍 Búsqueda Avanzada de Clientes
+- Búsqueda por múltiples criterios simultáneos
+- Filtrado por segmentos y etiquetas
+- Ordenamiento personalizable
+- Paginación de resultados
+- Inclusión opcional de mascotas en los resultados
+
+### 📊 Segmentación de Clientes
+- Creación y gestión de segmentos personalizados
+- Asignación de colores para mejor identificación visual
+- Filtrado por segmentos en informes y búsquedas
+
+### 🔄 Sistema de Migraciones
+- Control de versiones de la base de datos
+- Migraciones automáticas al desplegar
+- Scripts para crear nuevas migraciones
+- Herramienta de reinicio para entornos de desarrollo
+
+## 📋 Estructura de la Base de Datos
+
+### Tablas Principales
+
+#### `historias_clinicas`
+- Registro completo de todas las consultas médicas
+- Relación con mascotas, tipos de consulta y veterinarios
+- Datos clínicos completos (peso, temperatura, signos vitales)
+
+#### `tipos_consulta`
+- Tipos de consulta personalizables (ej: Consulta general, Vacunación, Cirugía)
+- Colores para identificación visual
+
+#### `archivos_adjuntos`
+- Almacenamiento de archivos médicos (imágenes, PDFs, etc.)
+- Metadatos descriptivos y relación con historias clínicas
+
+#### `vacunas` y `vacunas_aplicadas`
+- Catálogo de vacunas disponibles
+- Registro de aplicaciones con fechas y lotes
+
+#### `medicamentos` y `recetas_medicamentos`
+- Inventario de medicamentos
+- Prescripciones médicas con dosis y frecuencia
+
+#### `plantillas_historia_clinica`
+- Plantillas predefinidas para diferentes tipos de consulta
+- Ahorra tiempo en consultas frecuentes
 
 ## 🚀 Instalación Rápida
 
@@ -131,7 +196,59 @@ npm start
 
 📖 **Documentación completa**: Ver [GUIA_COMPLETA_BOT.md](GUIA_COMPLETA_BOT.md)
 
-## 📁 Estructura del Proyecto
+## 📊 API de Historias Clínicas
+
+### Endpoints Principales
+
+#### `GET /api/historias-clinicas/mascota/:mascota_id`
+Obtiene el historial clínico completo de una mascota con paginación.
+
+**Parámetros:**
+- `pagina`: Número de página (opcional, predeterminado: 1)
+- `por_pagina`: Cantidad de registros por página (opcional, predeterminado: 10)
+- `incluir_archivos`: Incluir archivos adjuntos (opcional, valores: 'true' o 'false')
+
+#### `POST /api/historias-clinicas`
+Crea una nueva entrada en el historial clínico.
+
+**Cuerpo de la solicitud (JSON):**
+```json
+{
+  "mascota_id": 1,
+  "tipo_consulta_id": 1,
+  "motivo_consulta": "Control de rutina",
+  "sintomatologia": "Paciente asintomático",
+  "diagnostico": "Estado de salud óptimo",
+  "tratamiento": "Control en 6 meses",
+  "peso_kg": 4.5,
+  "temperatura_c": 38.5,
+  "medicamentos": [
+    {
+      "medicamento_id": 1,
+      "dosis": "1 tableta cada 12 horas",
+      "frecuencia": "Cada 12 horas por 7 días",
+      "duracion_dias": 7,
+      "indicaciones": "Administrar con alimento"
+    }
+  ]
+}
+```
+
+#### `POST /api/historias-clinicas/:id/archivos`
+Sube un archivo adjunto a una historia clínica.
+
+**Form-Data:**
+- `archivo`: Archivo a subir (imagen, PDF, etc.)
+- `descripcion`: Descripción opcional del archivo
+
+#### `GET /api/historias-clinicas/estadisticas`
+Obtiene estadísticas de las historias clínicas.
+
+**Parámetros:**
+- `fecha_desde`: Fecha de inicio (opcional)
+- `fecha_hasta`: Fecha de fin (opcional)
+
+## 📄 Estructura del Proyecto
 
 ```
 windsurf-project/
