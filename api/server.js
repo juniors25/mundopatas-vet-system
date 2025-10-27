@@ -10,6 +10,7 @@ const { Pool } = require('pg');
 const clienteRoutes = require('../routes/clienteRoutes');
 const historiaClinicaRoutes = require('../routes/historiaClinicaRoutes');
 const inventarioRoutes = require('../routes/inventarioRoutes');
+const citasRoutes = require('../routes/citasRoutes');
 
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
@@ -145,6 +146,7 @@ initializeDatabase();
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/historias-clinicas', historiaClinicaRoutes);
 app.use('/api/inventario', inventarioRoutes);
+app.use('/api/citas', citasRoutes);
 
 // Middleware para adjuntar la conexión a la base de datos a cada solicitud
 app.use((req, res, next) => {

@@ -293,10 +293,46 @@ Mundo Patas Veterinaria 🐾
     };
 }
 
+/**
+ * Función genérica para enviar notificaciones por diferentes canales
+ * @param {Object} opciones - Opciones de la notificación
+ * @param {string} opciones.tipo - Tipo de notificación (email, sms, whatsapp)
+ * @param {string} opciones.destinatario - Correo o número de teléfono del destinatario
+ * @param {string} opciones.asunto - Asunto del mensaje (opcional para SMS/WhatsApp)
+ * @param {string} opciones.mensaje - Contenido del mensaje
+ * @returns {Promise<Object>} - Resultado del envío
+ */
+async function enviarNotificacion({ tipo, destinatario, asunto, mensaje }) {
+    try {
+        switch (tipo.toLowerCase()) {
+            case 'email':
+                return await enviarEmail(destinatario, asunto, mensaje);
+            case 'whatsapp':
+                return await enviarWhatsApp(destinatario, mensaje);
+            case 'sms':
+                // Para SMS, podríamos usar el mismo método que WhatsApp o implementar uno específico
+                return await enviarWhatsApp(destinatario, mensaje);
+            default:
+                console.warn(`Tipo de notificación no soportado: ${tipo}`);
+                return {
+                    success: false,
+                    error: `Tipo de notificación no soportado: ${tipo}`
+                };
+        }
+    } catch (error) {
+        console.error('Error al enviar notificación:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 module.exports = {
     enviarEmail,
     enviarWhatsApp,
     enviarTelegram,
+    enviarNotificacion,
     generarMensajeAlimentoBajo,
     generarMensajeRecordatorioVacuna,
     configurarEmail
