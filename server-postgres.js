@@ -315,36 +315,79 @@ app.get('/api/consultas', authenticateToken, async (req, res) => {
         });
     }
 });
-// Middleware de autenticación para desarrollo/pruebas
-const devAuth = (req, res, next) => {
-    // Si estamos en producción, usar autenticación real
-    if (process.env.NODE_ENV === 'production') {
-        return authenticateToken(req, res, next);
-    }
-    
-    // En desarrollo, permitir acceso sin autenticación pero con un usuario simulado
-    console.log('🔧 Modo desarrollo: Usando usuario simulado');
-    
-    // Crear un usuario de prueba con ID 1 (o el que corresponda a tu base de datos)
-    req.user = { 
-        id: 1, 
-        email: 'desarrollo@ejemplo.com',
-        role: 'admin'
-    };
-    
-    // Si se proporciona un token de prueba en los headers, intentar usarlo
-    const testToken = req.headers['x-test-token'];
-    if (testToken) {
-        try {
-            const decoded = jwt.verify(testToken, JWT_SECRET);
-            req.user = { ...req.user, ...decoded };
-            console.log(`🔑 Usando token de prueba para el usuario: ${decoded.email || 'desconocido'}`);
-        } catch (error) {
-            console.warn('⚠️  Token de prueba inválido, usando usuario por defecto');
+// Middleware de autenticación mejorado para desarrollo/pruebas
+const devAuth = async (req, res, next) => {
+    try {
+        // Verificar si hay un token en el encabezado de autorización
+        const authHeader = req.headers['authorization'];
+        
+        // Si hay un token, intentar autenticación real primero
+        if (authHeader) {
+            const token = authHeader.split(' ')[1];
+            if (token) {
+                try {
+                    const user = await new Promise((resolve, reject) => {
+                        jwt.verify(token, JWT_SECRET, (err, user) => {
+                            if (err) reject(err);
+                            else resolve(user);
+                        });
+                    });
+                    
+                    // Si el token es válido, usar el usuario autenticado
+                    req.user = user;
+                    console.log(`🔑 Usuario autenticado: ${user.email || 'ID: ' + user.id}`);
+                    return next();
+                } catch (error) {
+                    console.warn('⚠️  Token inválido, continuando con modo desarrollo');
+                    // Continuar con el modo desarrollo si el token no es válido
+                }
+            }
         }
+        
+        // Si estamos en producción y no hay token válido, denegar acceso
+        if (process.env.NODE_ENV === 'production') {
+            console.error('❌ Intento de acceso no autorizado en producción');
+            return res.status(401).json({
+                success: false,
+                error: 'No autorizado',
+                message: 'Se requiere autenticación para acceder a este recurso',
+                requiresAuth: true
+            });
+        }
+        
+        // Modo desarrollo: Usar usuario simulado
+        console.log('🔧 Modo desarrollo: Usando usuario simulado');
+        
+        // Crear un usuario de prueba con ID 1 (o el que corresponda a tu base de datos)
+        req.user = { 
+            id: 1, 
+            email: 'desarrollo@ejemplo.com',
+            role: 'admin',
+            isDemo: true
+        };
+        
+        // Si se proporciona un token de prueba en los headers, intentar usarlo
+        const testToken = req.headers['x-test-token'];
+        if (testToken) {
+            try {
+                const decoded = jwt.verify(testToken, JWT_SECRET);
+                req.user = { ...req.user, ...decoded, isDemo: true };
+                console.log(`🔑 Usando token de prueba para el usuario: ${decoded.email || 'desconocido'}`);
+            } catch (error) {
+                console.warn('⚠️  Token de prueba inválido, usando usuario por defecto');
+            }
+        }
+        
+        next();
+    } catch (error) {
+        console.error('❌ Error en el middleware de autenticación:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Error de autenticación',
+            message: 'Ocurrió un error al procesar la autenticación',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
-    
-    next();
 };
 
 // Endpoint para crear una nueva consulta
