@@ -36,22 +36,65 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Middleware de autenticación
+// Middleware de autenticación mejorado
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ error: 'Token de acceso requerido' });
-    }
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Token inválido' });
+    try {
+        // Obtener el token del encabezado de autorización
+        const authHeader = req.headers['authorization'];
+        
+        // Verificar si el encabezado de autorización existe
+        if (!authHeader) {
+            console.warn('⚠️  Intento de acceso sin token de autorización');
+            return res.status(401).json({ 
+                success: false,
+                error: 'Token de acceso requerido',
+                message: 'Debes iniciar sesión para acceder a este recurso'
+            });
         }
-        req.user = user;
-        next();
-    });
+
+        // Extraer el token (formato: 'Bearer token')
+        const token = authHeader.split(' ')[1];
+        
+        if (!token) {
+            console.warn('⚠️  Formato de token inválido');
+            return res.status(401).json({ 
+                success: false,
+                error: 'Formato de token inválido',
+                message: 'El formato del token debe ser: Bearer <token>'
+            });
+        }
+
+        // Verificar el token
+        jwt.verify(token, JWT_SECRET, (err, user) => {
+            if (err) {
+                console.error('❌ Error al verificar el token:', err.message);
+                
+                let errorMessage = 'Token inválido';
+                if (err.name === 'TokenExpiredError') {
+                    errorMessage = 'El token ha expirado';
+                } else if (err.name === 'JsonWebTokenError') {
+                    errorMessage = 'Token mal formado';
+                }
+                
+                return res.status(403).json({ 
+                    success: false,
+                    error: errorMessage,
+                    message: 'No tienes permiso para acceder a este recurso'
+                });
+            }
+            
+            // Token válido, adjuntar usuario a la solicitud
+            req.user = user;
+            next();
+        });
+    } catch (error) {
+        console.error('❌ Error en el middleware de autenticación:', error);
+        return res.status(500).json({ 
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Ocurrió un error al procesar la autenticación'
+        });
+    }
 }
 
 // Inicializar base de datos
@@ -267,82 +310,111 @@ app.get('/api/consultas', authenticateToken, async (req, res) => {
             success: false,
             error: 'Error al obtener las consultas',
             message: 'Ocurrió un error al intentar recuperar las consultas',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
-// Conditional authentication for development/testing
-const devAuth = process.env.NODE_ENV === 'development' ? (req, res, next) => {
-    // For development, create a mock user
-    req.user = { id: 1 }; // Default test user ID
+// Middleware de autenticación para desarrollo/pruebas
+const devAuth = (req, res, next) => {
+    // Si estamos en producción, usar autenticación real
+    if (process.env.NODE_ENV === 'production') {
+        return authenticateToken(req, res, next);
+    }
+    
+    // En desarrollo, permitir acceso sin autenticación pero con un usuario simulado
+    console.log('🔧 Modo desarrollo: Usando usuario simulado');
+    
+    // Crear un usuario de prueba con ID 1 (o el que corresponda a tu base de datos)
+    req.user = { 
+        id: 1, 
+        email: 'desarrollo@ejemplo.com',
+        role: 'admin'
+    };
+    
+    // Si se proporciona un token de prueba en los headers, intentar usarlo
+    const testToken = req.headers['x-test-token'];
+    if (testToken) {
+        try {
+            const decoded = jwt.verify(testToken, JWT_SECRET);
+            req.user = { ...req.user, ...decoded };
+            console.log(`🔑 Usando token de prueba para el usuario: ${decoded.email || 'desconocido'}`);
+        } catch (error) {
+            console.warn('⚠️  Token de prueba inválido, usando usuario por defecto');
+        }
+    }
+    
     next();
-} : authenticateToken;
+};
 
+// Endpoint para crear una nueva consulta
 app.post('/api/consultas', devAuth, async (req, res) => {
-    console.log('📝 Datos recibidos para nueva consulta:', req.body);
-    
-    // Validar campos obligatorios
-    const { mascota_id, motivo, observaciones = '' } = req.body;
-    
-    if (!mascota_id) {
-        console.error('❌ Error: mascota_id es obligatorio');
-        return res.status(400).json({ error: 'El ID de la mascota es obligatorio' });
-    }
-    
-    if (!motivo) {
-        console.error('❌ Error: motivo es obligatorio');
-        return res.status(400).json({ error: 'El motivo de la consulta es obligatorio' });
-    }
-    
-    // Desestructurar el resto de los campos con valores por defecto
-    const { 
-        // Semiología y examen físico
-        estado_corporal = null, manto_piloso = null, tiempo_llenado_capilar = null,
-        frecuencia_cardiaca = null, frecuencia_respiratoria = null, peso = null, 
-        temperatura = null, ganglios_linfaticos = null, tonalidad_mucosa = null, 
-        examen_bucal = null, examen_ocular = null, examen_otico = null, 
-        examen_neurologico = null, examen_aparato_locomotor = null,
-        // Estudios complementarios
-        tipo_analisis = null, fecha_analisis = null, resultados_analisis = null, 
-        archivo_analisis_url = null, electrocardiograma = null, 
-        medicion_presion_arterial = null, ecocardiograma = null,
-        // Desparasitación
-        desparasitacion = null, fecha_desparasitacion = null, 
-        producto_desparasitacion = null, proxima_desparasitacion = null,
-        // Diagnóstico
-        diagnostico_presuntivo = null, diagnostico_final = null,
-        // Tratamiento
-        medicamento = null, dosis = null, intervalo = null, tratamiento_inyectable = null
-    } = req.body;
-
     try {
+        console.log('📝 Datos recibidos para nueva consulta:', req.body);
+        console.log('👤 Usuario autenticado:', req.user);
+        
+        // Validar campos obligatorios
+        const { mascota_id, motivo, observaciones = '' } = req.body;
+        
+        if (!mascota_id) {
+            console.error('❌ Error: mascota_id es obligatorio');
+            return res.status(400).json({ 
+                success: false,
+                error: 'Datos incompletos',
+                message: 'El ID de la mascota es obligatorio' 
+            });
+        }
+        
+        if (!motivo) {
+            console.error('❌ Error: motivo es obligatorio');
+            return res.status(400).json({ 
+                success: false,
+                error: 'Datos incompletos',
+                message: 'El motivo de la consulta es obligatorio' 
+            });
+        }
+        
+        // Desestructurar el resto de los campos con valores por defecto
+        const { 
+            // Semiología y examen físico
+            estado_corporal = null, manto_piloso = null, tiempo_llenado_capilar = null,
+            frecuencia_cardiaca = null, frecuencia_respiratoria = null, peso = null, 
+            temperatura = null, ganglios_linfaticos = null, tonalidad_mucosa = null, 
+            examen_bucal = null, examen_ocular = null, examen_otico = null, 
+            examen_neurologico = null, examen_aparato_locomotor = null,
+            // Estudios complementarios
+            tipo_analisis = null, fecha_analisis = null, resultados_analisis = null, 
+            archivo_analisis_url = null, electrocardiograma = null, 
+            medicion_presion_arterial = null, ecocardiograma = null,
+            // Desparasitación
+            desparasitacion = null, fecha_desparasitacion = null, 
+            producto_desparasitacion = null, proxima_desparasitacion = null,
+            // Diagnóstico
+            diagnostico_presuntivo = null, diagnostico_final = null,
+            // Tratamiento
+            medicamento = null, dosis = null, intervalo = null, tratamiento_inyectable = null
+        } = req.body;
+
         console.log(`🔍 Verificando mascota ID: ${mascota_id} para el veterinario ID: ${req.user.id}`);
         
         // Verificar que la mascota pertenece al veterinario
-        let mascotaCheck;
-        try {
-            mascotaCheck = await pool.query(`
-                SELECT m.id, m.cliente_id, m.nombre as nombre_mascota, 
-                       c.nombre as nombre_cliente, c.apellido as apellido_cliente
-                FROM mascotas m 
-                JOIN clientes c ON m.cliente_id = c.id 
-                WHERE m.id = $1 AND c.veterinario_id = $2
-            `, [mascota_id, req.user.id]);
-            
-            console.log(`🔎 Resultado de la búsqueda de mascota:`, mascotaCheck.rows[0] || 'No encontrada');
-            
-            if (mascotaCheck.rows.length === 0) {
-                console.error(`❌ Error: La mascota con ID ${mascota_id} no existe o no pertenece al veterinario`);
-                return res.status(403).json({ 
-                    error: 'No tienes permiso para agregar consultas a esta mascota',
-                    details: 'La mascota no existe o no pertenece a tu lista de pacientes'
-                });
-            }
-        } catch (dbError) {
-            console.error('❌ Error al verificar la mascota en la base de datos:', dbError);
-            return res.status(500).json({ 
-                error: 'Error al verificar la mascota',
-                details: dbError.message
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id, m.nombre as nombre_mascota, 
+                   c.nombre as nombre_cliente, c.apellido as apellido_cliente
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        console.log(`🔎 Resultado de la búsqueda de mascota:`, mascotaCheck.rows[0] || 'No encontrada');
+        
+        if (mascotaCheck.rows.length === 0) {
+            console.error(`❌ Error: La mascota con ID ${mascota_id} no existe o no pertenece al veterinario`);
+            return res.status(403).json({ 
+                success: false,
+                error: 'No autorizado',
+                message: 'No tienes permiso para agregar consultas a esta mascota',
+                details: 'La mascota no existe o no pertenece a tu lista de pacientes'
             });
         }
 
@@ -351,87 +423,87 @@ app.post('/api/consultas', devAuth, async (req, res) => {
         
         console.log(`📝 Intentando registrar consulta para mascota: ${clienteInfo.nombre_mascota} (ID: ${mascota_id})`);
         
-        try {
-            const result = await pool.query(
-                `INSERT INTO consultas (
-                    veterinario_id, cliente_id, mascota_id, motivo,
-                    estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                    frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                    ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                    examen_otico, examen_neurologico, examen_aparato_locomotor,
-                    tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                    electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                    desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                    diagnostico_presuntivo, diagnostico_final,
-                    medicamento, dosis, intervalo, tratamiento_inyectable,
-                    observaciones, fecha_consulta, estado
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                    $29, $30, $31, $32, $33, $34, $35, $36, NOW(), 'completada'
-                ) RETURNING *`,
-                [
-                    req.user.id, cliente_id, mascota_id, motivo,
-                    estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                    frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                    ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                    examen_otico, examen_neurologico, examen_aparato_locomotor,
-                    tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                    electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                    desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                    diagnostico_presuntivo, diagnostico_final,
-                    medicamento, dosis, intervalo, tratamiento_inyectable,
-                    observaciones
-                ]
-            );
-            
-            console.log('✅ Consulta registrada exitosamente:', result.rows[0]);
-            
-            // Enviar respuesta exitosa con más detalles
-            res.status(201).json({ 
-                success: true,
-                message: 'Consulta registrada exitosamente',
-                consulta: result.rows[0],
-                mascota: {
-                    id: mascota_id,
-                    nombre: clienteInfo.nombre_mascota
-                },
-                cliente: {
-                    id: cliente_id,
-                    nombre: clienteInfo.nombre_cliente,
-                    apellido: clienteInfo.apellido_cliente
-                }
-            });
-            
-        } catch (dbError) {
-            console.error('❌ Error al insertar la consulta en la base de datos:', dbError);
-            
-            // Verificar si es un error de restricción de clave foránea
-            if (dbError.code === '23503') { // Código para violación de clave foránea
-                return res.status(400).json({
-                    success: false,
-                    error: 'Error de referencia',
-                    message: 'Uno o más IDs proporcionados no existen en la base de datos',
-                    details: dbError.detail
-                });
+        const result = await pool.query(
+            `INSERT INTO consultas (
+                veterinario_id, cliente_id, mascota_id, motivo,
+                estado_corporal, manto_piloso, tiempo_llenado_capilar,
+                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
+                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
+                examen_otico, examen_neurologico, examen_aparato_locomotor,
+                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
+                electrocardiograma, medicion_presion_arterial, ecocardiograma,
+                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
+                diagnostico_presuntivo, diagnostico_final,
+                medicamento, dosis, intervalo, tratamiento_inyectable,
+                observaciones, fecha_consulta, estado
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+                $29, $30, $31, $32, $33, $34, $35, $36, NOW(), 'completada'
+            ) RETURNING *`,
+            [
+                req.user.id, cliente_id, mascota_id, motivo,
+                estado_corporal, manto_piloso, tiempo_llenado_capilar,
+                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
+                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
+                examen_otico, examen_neurologico, examen_aparato_locomotor,
+                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
+                electrocardiograma, medicion_presion_arterial, ecocardiograma,
+                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
+                diagnostico_presuntivo, diagnostico_final,
+                medicamento, dosis, intervalo, tratamiento_inyectable,
+                observaciones
+            ]
+        );
+        
+        console.log('✅ Consulta registrada exitosamente:', result.rows[0]);
+        
+        // Enviar respuesta exitosa con más detalles
+        res.status(201).json({ 
+            success: true,
+            message: 'Consulta registrada exitosamente',
+            consulta: result.rows[0],
+            mascota: {
+                id: mascota_id,
+                nombre: clienteInfo.nombre_mascota
+            },
+            cliente: {
+                id: cliente_id,
+                nombre: clienteInfo.nombre_cliente,
+                apellido: clienteInfo.apellido_cliente
             }
-            
-            // Para otros errores de base de datos
-            res.status(500).json({
+        });
+        
+    } catch (error) {
+        console.error('❌ Error en la creación de consulta:', error);
+        
+        // Manejar diferentes tipos de errores
+        if (error.code === '23503') { // Violación de clave foránea
+            return res.status(400).json({
                 success: false,
-                error: 'Error al guardar la consulta',
-                message: 'Ocurrió un error al intentar guardar la consulta',
-                details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+                error: 'Error de referencia',
+                message: 'Uno o más IDs proporcionados no existen en la base de datos',
+                details: error.detail,
+                code: error.code
             });
         }
-    } catch (error) {
-        console.error('Error registrando consulta:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        
+        // Para otros errores de base de datos
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Ocurrió un error al procesar la solicitud',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            code: error.code
+        });
     }
 });
 
 app.get('/api/consultas/:mascotaId', devAuth, async (req, res) => {
     try {
+        console.log(`🔍 Obteniendo consultas para mascota ID: ${req.params.mascotaId}`);
+        console.log('👤 Usuario autenticado:', req.user);
+        
         // Verificar permisos
         const mascotaCheck = await pool.query(`
             SELECT m.id 
