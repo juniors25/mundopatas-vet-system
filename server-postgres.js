@@ -366,19 +366,65 @@ const devAuth = (req, res, next) => {
     });
 };
 
-// Endpoint para crear una nueva consulta (temporalmente sin autenticación)
-app.post('/api/consultas', (req, res, next) => {
-    // Usuario de prueba para desarrollo
-    req.user = { 
-        id: 1, 
-        email: 'desarrollo@ejemplo.com',
-        role: 'admin',
-        isDemo: true,
-        nombre: 'Usuario de Prueba',
-        apellido: 'Desarrollo'
-    };
-    next();
-}, async (req, res) => {
+// Middleware de autenticación específico para consultas
+const authConsulta = (req, res, next) => {
+    try {
+        // En desarrollo, usar autenticación simulada
+        if (process.env.NODE_ENV !== 'production') {
+            req.user = { 
+                id: 1, 
+                email: 'consulta@ejemplo.com',
+                role: 'admin',
+                nombre: 'Usuario',
+                apellido: 'Consulta'
+            };
+            console.log('🔧 Modo desarrollo: Usuario simulado para consulta');
+            return next();
+        }
+
+        // En producción, verificar token
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            console.error('❌ No se proporcionó token de autenticación para consulta');
+            return res.status(200).json({
+                success: false,
+                error: 'Token de acceso requerido',
+                message: 'Debes iniciar sesión para acceder a este recurso',
+                requiresAuth: true
+            });
+        }
+
+        // Verificar token JWT
+        jwt.verify(token, JWT_SECRET, (err, user) => {
+            if (err) {
+                console.error('❌ Error al verificar el token de consulta:', err.message);
+                return res.status(200).json({
+                    success: false,
+                    error: 'Sesión expirada',
+                    message: 'Tu sesión ha expirado, por favor inicia sesión nuevamente',
+                    requiresAuth: true
+                });
+            }
+            
+            // Token válido
+            req.user = user;
+            console.log(`🔑 Consulta - Usuario autenticado: ${user.email || 'ID: ' + user.id}`);
+            next();
+        });
+    } catch (error) {
+        console.error('❌ Error en middleware de autenticación de consulta:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Error de autenticación',
+            message: 'Ocurrió un error al verificar la autenticación'
+        });
+    }
+};
+
+// Endpoint para crear una nueva consulta
+app.post('/api/consultas', authConsulta, async (req, res) => {
     try {
         console.log('📝 Datos recibidos para nueva consulta:', req.body);
         console.log('👤 Usuario autenticado:', req.user);
