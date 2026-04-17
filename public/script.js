@@ -87,34 +87,59 @@ function showSection(sectionName) {
         section.style.display = 'none';
     });
     
-    // Mostrar sección seleccionada
-    document.getElementById(sectionName + '-section').style.display = 'block';
-    
-    // Cargar datos según la sección
-    switch(sectionName) {
-        case 'dashboard':
-            loadDashboardData();
-            break;
-        case 'clientes':
-            loadClientes();
-            break;
-        case 'mascotas':
-            loadMascotas();
-            loadClientesSelect();
-            break;
-        case 'consultas':
-            loadMascotasSelect('#consultas-section');
-            break;
-        case 'analisis':
-            loadMascotasSelect('#analisis-section');
-            break;
-        case 'vacunas':
-            loadMascotasSelect('#vacunas-section');
-            loadMascotasSelectForFilter();
-            break;
-        case 'informes':
-            loadMascotasSelect('#informes-section');
-            break;
+    // Mostrar sección seleccionada si existe
+    const sectionElement = document.getElementById(sectionName + '-section');
+    if (sectionElement) {
+        sectionElement.style.display = 'block';
+        
+        // Cargar datos según la sección
+        switch(sectionName) {
+            case 'dashboard':
+                loadDashboardData();
+                break;
+            case 'clientes':
+                loadClientes();
+                break;
+            case 'mascotas':
+                loadMascotas();
+                loadClientesSelect();
+                break;
+            case 'consultas':
+                loadMascotasSelect('#consultas-section');
+                break;
+            case 'analisis':
+                loadMascotasSelect('#analisis-section');
+                break;
+            case 'vacunas':
+                loadMascotasSelect('#vacunas-section');
+                loadMascotasSelectForFilter();
+                break;
+            case 'informes':
+                loadMascotasSelect('#informes-section');
+                break;
+        }
+    } else {
+        // Si la sección no existe, mostrar mensaje o redirigir
+        console.warn(`Sección '${sectionName}' no encontrada`);
+        
+        // Redirigir a páginas separadas para funciones nuevas
+        switch(sectionName) {
+            case 'citas':
+                window.location.href = '/agendar-cita.html';
+                break;
+            case 'facturacion':
+                window.location.href = '/citas-facturacion.html';
+                break;
+            case 'notificaciones':
+                alert('Módulo de notificaciones en desarrollo');
+                break;
+            case 'reportes':
+                alert('Módulo de reportes en desarrollo');
+                break;
+            default:
+                // Por defecto, mostrar dashboard
+                showSection('dashboard');
+        }
     }
 }
 

@@ -414,7 +414,156 @@ app.post('/api/consultas', authenticateToken, (req, res) => {
     }
 });
 
-// Endpoint de健康检查
+// Endpoint de login
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({
+            success: false,
+            error: 'Email y contraseña son requeridos'
+        });
+    }
+
+    try {
+        // Buscar veterinario por email
+        const stmt = db.prepare('SELECT * FROM veterinarios WHERE email = ?');
+        const veterinario = stmt.get(email);
+
+        if (!veterinario) {
+            return res.status(401).json({
+                success: false,
+                error: 'Credenciales inválidas'
+            });
+        }
+
+        // Verificar contraseña
+        const validPassword = bcrypt.compareSync(password, veterinario.password);
+        if (!validPassword) {
+            return res.status(401).json({
+                success: false,
+                error: 'Credenciales inválidas'
+            });
+        }
+
+        // Generar token JWT
+        const token = jwt.sign(
+            { 
+                id: veterinario.id, 
+                email: veterinario.email,
+                nombre_veterinaria: veterinario.nombre_veterinaria 
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Login exitoso',
+            token,
+            user: {
+                id: veterinario.id,
+                email: veterinario.email,
+                nombre_veterinaria: veterinario.nombre_veterinaria,
+                nombre_veterinario: veterinario.nombre_veterinario
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en login:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error en el servidor'
+        });
+    }
+});
+
+// Endpoint de registro
+app.post('/api/auth/register', (req, res) => {
+    const { nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion } = req.body;
+
+    if (!nombre_veterinaria || !nombre_veterinario || !email || !password) {
+        return res.status(400).json({
+            success: false,
+            error: 'Todos los campos son requeridos'
+        });
+    }
+
+    try {
+        // Verificar si el email ya existe
+        const stmt = db.prepare('SELECT id FROM veterinarios WHERE email = ?');
+        const existing = stmt.get(email);
+
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                error: 'El email ya está registrado'
+            });
+        }
+
+        // Hashear contraseña
+        const hashedPassword = bcrypt.hashSync(password, 10);
+
+        // Insertar nuevo veterinario
+        const insertStmt = db.prepare(`
+            INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = insertStmt.run(nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion);
+
+        // Generar token JWT
+        const token = jwt.sign(
+            { 
+                id: result.lastInsertRowid, 
+                email,
+                nombre_veterinaria 
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Registro exitoso',
+            token,
+            user: {
+                id: result.lastInsertRowid,
+                email,
+                nombre_veterinaria,
+                nombre_veterinario
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en registro:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error en el servidor'
+        });
+    }
+});
+
+// Endpoint de configuración de la aplicación
+app.get('/api/app-config', (req, res) => {
+    res.json({
+        mode: 'production', // o 'demo' según corresponda
+        version: '1.0.1',
+        features: {
+            licencias: true,
+            notificaciones: true,
+            multi_veterinario: true,
+            portal_paciente: true
+        },
+        limits: {
+            max_clientes: 1000,
+            max_mascotas: 5000,
+            max_consultas: 10000
+        }
+    });
+});
+
+// Endpoint de salud
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
