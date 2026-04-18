@@ -3537,11 +3537,8 @@ app.get('/api/vacunas', authenticateToken, async (req, res) => {
             LIMIT 100
         `, [req.user.id]);
         
-        res.json({
-            success: true,
-            count: result.rows.length,
-            vacunas: result.rows
-        });
+        // Devolver array directamente para compatibilidad con frontend
+        res.json(result.rows);
     } catch (error) {
         console.error('Error obteniendo vacunas:', error);
         res.status(500).json({
@@ -3578,11 +3575,8 @@ app.get('/api/vacunas/:mascota_id', authenticateToken, async (req, res) => {
             ORDER BY fecha_vacunacion DESC
         `, [mascota_id, req.user.id]);
         
-        res.json({
-            success: true,
-            count: result.rows.length,
-            vacunas: result.rows
-        });
+        // Devolver array directamente para compatibilidad con frontend
+        res.json(result.rows);
     } catch (error) {
         console.error('Error obteniendo vacunas de mascota:', error);
         res.status(500).json({
