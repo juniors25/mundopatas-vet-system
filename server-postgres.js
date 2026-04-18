@@ -3523,6 +3523,141 @@ if (CRON_ENABLED) {
     console.log('ℹ️  Bot automático deshabilitado. Usar Task Scheduler o ejecutar manualmente.');
 }
 
+// RUTAS DE VACUNAS
+app.get('/api/vacunas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT v.*, m.nombre as nombre_mascota, m.especie, 
+                   c.nombre as nombre_cliente, c.apellido as apellido_cliente
+            FROM vacunas v
+            JOIN mascotas m ON v.mascota_id = m.id
+            JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.veterinario_id = $1
+            ORDER BY v.fecha_vacunacion DESC
+            LIMIT 100
+        `, [req.user.id]);
+        
+        res.json({
+            success: true,
+            count: result.rows.length,
+            vacunas: result.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo vacunas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al obtener las vacunas',
+            message: 'Ocurrió un error al intentar recuperar las vacunas'
+        });
+    }
+});
+
+app.get('/api/vacunas/:mascota_id', authenticateToken, async (req, res) => {
+    try {
+        const { mascota_id } = req.params;
+        
+        // Verificar que la mascota pertenece al veterinario
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Mascota no encontrada',
+                message: 'La mascota no existe o no pertenece a tu lista de pacientes'
+            });
+        }
+        
+        const result = await pool.query(`
+            SELECT * FROM vacunas 
+            WHERE mascota_id = $1 AND veterinario_id = $2
+            ORDER BY fecha_vacunacion DESC
+        `, [mascota_id, req.user.id]);
+        
+        res.json({
+            success: true,
+            count: result.rows.length,
+            vacunas: result.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo vacunas de mascota:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al obtener las vacunas de la mascota',
+            message: 'Ocurrió un error al intentar recuperar las vacunas'
+        });
+    }
+});
+
+app.post('/api/vacunas', authenticateToken, async (req, res) => {
+    try {
+        const { 
+            mascota_id, tipo_vacuna, fecha_vacunacion, 
+            proxima_vacunacion, veterinario_aplicante, lote_vacuna,
+            observaciones 
+        } = req.body;
+        
+        if (!mascota_id || !tipo_vacuna || !fecha_vacunacion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Datos incompletos',
+                message: 'La mascota, tipo de vacuna y fecha son obligatorios'
+            });
+        }
+        
+        // Verificar que la mascota pertenece al veterinario
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(403).json({
+                success: false,
+                error: 'No autorizado',
+                message: 'No tienes permiso para agregar vacunas a esta mascota'
+            });
+        }
+        
+        const result = await pool.query(`
+            INSERT INTO vacunas (
+                veterinario_id, cliente_id, mascota_id, tipo_vacuna, 
+                fecha_vacunacion, proxima_vacunacion, veterinario_aplicante,
+                lote_vacuna, observaciones, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *
+        `, [
+            req.user.id, 
+            mascotaCheck.rows[0].cliente_id, 
+            mascota_id, 
+            tipo_vacuna, 
+            fecha_vacunacion, 
+            proxima_vacunacion, 
+            veterinario_aplicante, 
+            lote_vacuna, 
+            observaciones
+        ]);
+        
+        res.status(201).json({
+            success: true,
+            message: 'Vacuna registrada exitosamente',
+            vacuna: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error registrando vacuna:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al registrar la vacuna',
+            message: 'Ocurrió un error al intentar registrar la vacuna'
+        });
+    }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log('');
@@ -3533,7 +3668,7 @@ app.listen(PORT, () => {
     console.log(`📱 Accede a: http://localhost:${PORT}`);
     console.log(`🌐 Landing comercial: http://localhost:${PORT}/landing-comercial.html`);
     console.log(`🤖 Bot automático: ${CRON_ENABLED ? 'HABILITADO (9:00 AM)' : 'DESHABILITADO'}`);
-    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`═══════════════════════════════════════════════════════════`);
     console.log('');
 });
 

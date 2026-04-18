@@ -897,9 +897,27 @@ async function initializeDatabase() {
         `);
 
         console.log('✅ Base de datos PostgreSQL inicializada correctamente');
+
+        // Crear tabla de vacunas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS vacunas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                tipo_vacuna VARCHAR(200) NOT NULL,
+                fecha_vacunacion DATE NOT NULL,
+                proxima_vacunacion DATE,
+                veterinario_aplicante VARCHAR(200),
+                lote_vacuna VARCHAR(100),
+                observaciones TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         console.log('✅ Tablas de control personal de clientes creadas');
     } catch (error) {
-        console.error('❌ Error inicializando base de datos:', error);
+        console.error('❌ Error al inicializar la base de datos:', error);
         throw error;
     }
 }
