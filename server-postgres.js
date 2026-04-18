@@ -388,7 +388,7 @@ const authConsulta = (req, res, next) => {
         
         if (!token) {
             console.error('❌ No se proporcionó token de autenticación para consulta');
-            return res.status(200).json({
+            return res.status(401).json({
                 success: false,
                 error: 'Token de acceso requerido',
                 message: 'Debes iniciar sesión para acceder a este recurso',
@@ -400,7 +400,7 @@ const authConsulta = (req, res, next) => {
         jwt.verify(token, JWT_SECRET, (err, user) => {
             if (err) {
                 console.error('❌ Error al verificar el token de consulta:', err.message);
-                return res.status(200).json({
+                return res.status(401).json({
                     success: false,
                     error: 'Sesión expirada',
                     message: 'Tu sesión ha expirado, por favor inicia sesión nuevamente',
@@ -501,35 +501,9 @@ app.post('/api/consultas', authConsulta, async (req, res) => {
         
         const result = await pool.query(
             `INSERT INTO consultas (
-                veterinario_id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones, fecha_consulta, estado
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                $29, $30, $31, $32, $33, $34, $35, $36, NOW(), 'completada'
-            ) RETURNING *`,
-            [
-                req.user.id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones
-            ]
+                veterinario_id, cliente_id, mascota_id, motivo, observaciones, fecha_consulta
+            ) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
+            [req.user.id, cliente_id, mascota_id, motivo, observaciones]
         );
         
         console.log('✅ Consulta registrada exitosamente:', result.rows[0]);
