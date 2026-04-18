@@ -279,30 +279,76 @@ app.get('/api/mascotas', authenticateToken, async (req, res) => {
 
 // RUTAS DE CONSULTAS
 
-// Obtener todas las consultas del veterinario autenticado
 app.get('/api/consultas', authenticateToken, async (req, res) => {
     console.log(`📋 Obteniendo consultas para el veterinario ID: ${req.user.id}`);
     
     try {
-        const result = await pool.query(`
-            SELECT c.*, 
-                   m.nombre as nombre_mascota, m.especie,
-                   cl.nombre as nombre_cliente, cl.apellido as apellido_cliente
-            FROM consultas c
-            JOIN mascotas m ON c.mascota_id = m.id
-            JOIN clientes cl ON c.cliente_id = cl.id
-            WHERE c.veterinario_id = $1
-            ORDER BY c.fecha_consulta DESC
+        // Primero verificar si hay consultas para este veterinario
+        const consultasBasic = await pool.query(`
+            SELECT id, mascota_id, cliente_id, motivo, observaciones, fecha_consulta
+            FROM consultas 
+            WHERE veterinario_id = $1 
+            ORDER BY fecha_consulta DESC 
             LIMIT 100
         `, [req.user.id]);
         
-        console.log(`✅ Se encontraron ${result.rows.length} consultas`);
+        console.log(`✅ Se encontraron ${consultasBasic.rows.length} consultas básicas`);
         
-        res.json({
-            success: true,
-            count: result.rows.length,
-            consultas: result.rows
-        });
+        // Si hay consultas, obtener información adicional
+        if (consultasBasic.rows.length > 0) {
+            const consultasConInfo = [];
+            
+            for (const consulta of consultasBasic.rows) {
+                // Obtener información de mascota
+                let mascotaInfo = { nombre: 'Mascota desconocida', especie: 'Desconocida' };
+                try {
+                    const mascotaResult = await pool.query(
+                        'SELECT nombre, especie FROM mascotas WHERE id = $1 AND veterinario_id = $2',
+                        [consulta.mascota_id, req.user.id]
+                    );
+                    if (mascotaResult.rows.length > 0) {
+                        mascotaInfo = mascotaResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo mascota:', error.message);
+                }
+                
+                // Obtener información de cliente
+                let clienteInfo = { nombre: 'Cliente desconocido', apellido: '' };
+                try {
+                    const clienteResult = await pool.query(
+                        'SELECT nombre, apellido FROM clientes WHERE id = $1 AND veterinario_id = $2',
+                        [consulta.cliente_id, req.user.id]
+                    );
+                    if (clienteResult.rows.length > 0) {
+                        clienteInfo = clienteResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo cliente:', error.message);
+                }
+                
+                consultasConInfo.push({
+                    ...consulta,
+                    nombre_mascota: mascotaInfo.nombre,
+                    especie: mascotaInfo.especie,
+                    nombre_cliente: clienteInfo.nombre,
+                    apellido_cliente: clienteInfo.apellido
+                });
+            }
+            
+            res.json({
+                success: true,
+                count: consultasConInfo.length,
+                consultas: consultasConInfo
+            });
+        } else {
+            // No hay consultas, devolver array vacío
+            res.json({
+                success: true,
+                count: 0,
+                consultas: []
+            });
+        }
         
     } catch (error) {
         console.error('❌ Error al obtener consultas:', error);
