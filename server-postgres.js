@@ -257,20 +257,50 @@ app.post('/api/mascotas', authenticateToken, async (req, res) => {
 
 app.get('/api/mascotas', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(`
+        // Primero obtener mascotas básicas sin JOIN
+        const mascotasBasic = await pool.query(`
             SELECT 
-                m.id, m.veterinario_id, m.cliente_id, m.nombre, m.especie, m.raza, 
-                m.edad, m.peso, m.pelaje as color, m.sexo, m.observaciones,
-                m.tiene_chip, m.numero_chip, m.tipo_alimento, m.marca_alimento,
-                m.peso_bolsa_kg, m.fecha_inicio_bolsa, m.gramos_diarios, m.created_at,
-                c.nombre as cliente_nombre, c.apellido as cliente_apellido 
-            FROM mascotas m 
-            JOIN clientes c ON m.cliente_id = c.id 
-            WHERE m.veterinario_id = $1 
-            ORDER BY m.created_at DESC
+                id, veterinario_id, cliente_id, nombre, especie, raza, 
+                edad, peso, pelaje as color, sexo, observaciones,
+                tiene_chip, numero_chip, tipo_alimento, marca_alimento,
+                peso_bolsa_kg, fecha_inicio_bolsa, gramos_diarios, created_at
+            FROM mascotas 
+            WHERE veterinario_id = $1 
+            ORDER BY created_at DESC
         `, [req.user.id]);
         
-        res.json(result.rows);
+        // Si hay mascotas, obtener información de clientes
+        if (mascotasBasic.rows.length > 0) {
+            const mascotasConInfo = [];
+            
+            for (const mascota of mascotasBasic.rows) {
+                // Obtener información del cliente
+                let clienteInfo = { nombre: 'Cliente desconocido', apellido: '' };
+                try {
+                    const clienteResult = await pool.query(
+                        'SELECT nombre, apellido FROM clientes WHERE id = $1 AND veterinario_id = $2',
+                        [mascota.cliente_id, req.user.id]
+                    );
+                    if (clienteResult.rows.length > 0) {
+                        clienteInfo = clienteResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo cliente:', error.message);
+                }
+                
+                mascotasConInfo.push({
+                    ...mascota,
+                    cliente_nombre: clienteInfo.nombre,
+                    cliente_apellido: clienteInfo.apellido
+                });
+            }
+            
+            res.json(mascotasConInfo);
+        } else {
+            // No hay mascotas, devolver array vacío
+            res.json([]);
+        }
+        
     } catch (error) {
         console.error('Error obteniendo mascotas:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
