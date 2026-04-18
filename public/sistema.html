@@ -852,7 +852,56 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="razas-data.js"></script>
+    
+    <!-- Datos de razas incrustados para evitar 404 -->
+    <script>
+        // Datos de razas incrustados directamente
+        const RAZAS_CANINAS = [
+            "Akita Inu", "Airedale Terrier", "Akita Americano", "Alano Americano", "Basset Hound",
+            "Beagle", "Bichon Frise", "Bobtail", "Border Collie", "Boston Terrier",
+            "Boxer", "Bulldog", "Bulldog Francés", "Bull Terrier", "Cairn Terrier",
+            "Cane Corso", "Cavalier King Charles", "Chihuahua", "Chow Chow", "Cocker Spaniel",
+            "Collie", "Dachshund", "Dálmata", "Doberman", "Dogo Argentino",
+            "English Bulldog", "Fox Terrier", "Galgo", "Golden Retriever", "Gran Danés",
+            "Husky Siberiano", "Jack Russell Terrier", "Kelpie", "Labrador Retriever", "Lhasa Apso",
+            "Maltés", "Mastín", "Mastín del Pirineo", "Mastín Napolitano", "Poodle",
+            "Pastor Alemán", "Pastor Belga", "Pastor Holandés", "Pastor Ovejero", "Pequinés",
+            "Pit Bull", "Pomerania", "Presa Canario", "Pug", "Rottweiler",
+            "San Bernardo", "Schnauzer", "Scottish Terrier", "Shar Pei", "Shiba Inu",
+            "Shih Tzu", "Staffordshire Terrier", "Taiwan Dog", "West Highland White Terrier",
+            "Whippet", "Yorkshire Terrier", "Wolf Siberiano", "Criollo", "Mestizo"
+        ];
+
+        const RAZAS_FELINAS = [
+            "Abyssinian", "American Bobtail", "American Curl", "American Shorthair", "American Wirehair",
+            "Angora Turco", "Balinés", "Bengal", "Birmano", "Bobtail Japonés",
+            "British Shorthair", "British Longhair", "Burmés", "Chartreux", "Cornish Rex",
+            "Cymric", "Devon Rex", "Exótico", "Himalayo", "Khao Manee",
+            "Korat", "Maine Coon", "Manx", "Mau Egipcio", "Ocicat",
+            "Oriental", "Persa", "Peterbald", "Pixie-Bob", "Ragdoll",
+            "Sagrado de Birmania", "Scottish Fold", "Scottish Straight", "Siamés",
+            "Siberiano", "Singapura", "Snowshoe", "Sphynx", "Tonkinés",
+            "Turco Van", "Criollo", "Mestizo", "Europeo Común", "Siames"
+        ];
+
+        function getRazasPorEspecie(especie) {
+            const especieLower = especie.toLowerCase();
+            
+            switch(especieLower) {
+                case 'perro':
+                case 'perros':
+                case 'canino':
+                    return RAZAS_CANINAS;
+                case 'gato':
+                case 'gatos':
+                case 'felino':
+                    return RAZAS_FELINAS;
+                default:
+                    return RAZAS_CANINAS.concat(RAZAS_FELINAS);
+            }
+        }
+    </script>
+    
     <script src="script.js"></script>
     
     <!-- App Mode and Watermark -->
