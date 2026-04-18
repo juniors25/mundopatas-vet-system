@@ -17,6 +17,35 @@ const CRON_ENABLED = process.env.ENABLE_AUTO_CRON === 'true';
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware de logging global para identificar errores
+app.use((req, res, next) => {
+    console.log(`📝 ${req.method} ${req.url} - IP: ${req.ip}`);
+    
+    // Capturar errores en la respuesta
+    const originalSend = res.send;
+    res.send = function(data) {
+        if (res.statusCode === 500) {
+            console.error(`❌ ERROR 500 en ${req.method} ${req.url}`);
+            console.error(`📝 Response data:`, data);
+        }
+        return originalSend.call(this, data);
+    };
+    
+    next();
+});
+
+// Middleware de manejo de errores global
+app.use((err, req, res, next) => {
+    console.error(`❌ Error global en ${req.method} ${req.url}:`, err);
+    res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor',
+        message: 'Ocurrió un error inesperado',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 app.use(express.static('public'));
 
 // Configurar multer para subida de archivos
