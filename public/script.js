@@ -1126,3 +1126,47 @@ function toggleConsultaForm() {
         historialCard.style.display = 'block';
     }
 }
+
+// Manejar envío del formulario de consulta
+document.addEventListener('DOMContentLoaded', function() {
+    const consultaForm = document.getElementById('consulta-form');
+    if (consultaForm) {
+        consultaForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(consultaForm);
+            const consultaData = {};
+            
+            // Convertir FormData a objeto
+            for (let [key, value] of formData.entries()) {
+                consultaData[key] = value;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/consultas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(consultaData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Consulta registrada exitosamente');
+                    consultaForm.reset();
+                    toggleConsultaForm(); // Mostrar historial
+                    loadConsultas(); // Recargar consultas
+                } else {
+                    alert('Error al registrar consulta: ' + (result.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error al registrar consulta:', error);
+                alert('Error al registrar consulta. Por favor, inténtalo de nuevo.');
+            }
+        });
+    }
+});

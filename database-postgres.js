@@ -249,6 +249,105 @@ async function initializeDatabase() {
                 ) THEN
                     ALTER TABLE consultas ADD COLUMN proxima_desparasitacion DATE;
                 END IF;
+                
+                -- Agregar campos de semiología si no existen
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='temperatura'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN temperatura DECIMAL(4,2);
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='frecuencia_cardiaca'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN frecuencia_cardiaca INTEGER;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='frecuencia_respiratoria'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN frecuencia_respiratoria INTEGER;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='peso_consulta'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN peso_consulta DECIMAL(5,2);
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='estado_corporal'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN estado_corporal TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='hidratacion'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN hidratacion TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='mucosas'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN mucosas TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='tiempo_llenado_capilar'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN tiempo_llenado_capilar TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='pulso'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN pulso TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='diagnostico'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN diagnostico TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='tratamiento'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN tratamiento TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='estudios_complementarios'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN estudios_complementarios TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='desparasitacion_interna'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN desparasitacion_interna TEXT;
+                END IF;
+                
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='consultas' AND column_name='desparasitacion_externa'
+                ) THEN
+                    ALTER TABLE consultas ADD COLUMN desparasitacion_externa TEXT;
+                END IF;
             END $$;
         `);
 
