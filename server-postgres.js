@@ -164,6 +164,14 @@ app.post('/api/auth/register', async (req, res) => {
     const { nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion } = req.body;
 
     try {
+        // Verificar si la base de datos está conectada
+        if (!databaseConnected) {
+            return res.status(503).json({ 
+                error: 'Servicio no disponible temporalmente',
+                message: 'La base de datos no está conectada. Por favor, intenta nuevamente en unos minutos.'
+            });
+        }
+
         // Verificar si el email ya existe
         const existingUser = await pool.query('SELECT id FROM veterinarios WHERE email = $1', [email]);
         
@@ -174,10 +182,13 @@ app.post('/api/auth/register', async (req, res) => {
         // Encriptar contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insertar nuevo veterinario
+        // Insertar nuevo veterinario con período de prueba de 15 días
+        const fecha_prueba = new Date();
+        fecha_prueba.setDate(fecha_prueba.getDate() + 15); // 15 días de prueba
+
         const result = await pool.query(
-            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion]
+            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion, tipo_cuenta, fecha_fin_prueba) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion, 'prueba', fecha_prueba]
         );
 
         const user = result.rows[0];
@@ -185,6 +196,9 @@ app.post('/api/auth/register', async (req, res) => {
 
         res.json({
             message: 'Veterinario registrado exitosamente',
+            trial_period: true,
+            trial_end_date: fecha_prueba,
+            trial_days: 15,
             token,
             user: {
                 id: user.id,
@@ -195,7 +209,8 @@ app.post('/api/auth/register', async (req, res) => {
                 telefono: user.telefono,
                 direccion: user.direccion,
                 tipo_cuenta: user.tipo_cuenta,
-                licencia_activa: user.licencia_activa
+                licencia_activa: user.licencia_activa,
+                fecha_fin_prueba: user.fecha_fin_prueba
             }
         });
     } catch (error) {
@@ -208,6 +223,14 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        // Verificar si la base de datos está conectada
+        if (!databaseConnected) {
+            return res.status(503).json({ 
+                error: 'Servicio no disponible temporalmente',
+                message: 'La base de datos no está conectada. Por favor, intenta nuevamente en unos minutos.'
+            });
+        }
+
         const result = await pool.query('SELECT * FROM veterinarios WHERE email = $1', [email]);
         
         if (result.rows.length === 0) {
@@ -221,10 +244,26 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        // Verificar período de prueba
+        let trialStatus = null;
+        if (user.tipo_cuenta === 'prueba' && user.fecha_fin_prueba) {
+            const hoy = new Date();
+            const finPrueba = new Date(user.fecha_fin_prueba);
+            const diasRestantes = Math.ceil((finPrueba - hoy) / (1000 * 60 * 60 * 24));
+            
+            trialStatus = {
+                is_trial: true,
+                trial_end_date: user.fecha_fin_prueba,
+                days_remaining: diasRestantes > 0 ? diasRestantes : 0,
+                trial_expired: diasRestantes <= 0
+            };
+        }
+
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
 
         res.json({
             message: 'Login exitoso',
+            trial_status: trialStatus,
             token,
             user: {
                 id: user.id,
@@ -235,11 +274,77 @@ app.post('/api/login', async (req, res) => {
                 telefono: user.telefono,
                 direccion: user.direccion,
                 tipo_cuenta: user.tipo_cuenta,
-                licencia_activa: user.licencia_activa
+                licencia_activa: user.licencia_activa,
+                fecha_fin_prueba: user.fecha_fin_prueba
             }
         });
     } catch (error) {
         console.error('Error en login:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Endpoint para verificar estado de licencia
+app.get('/api/license/status', authenticateToken, async (req, res) => {
+    try {
+        if (!databaseConnected) {
+            return res.status(503).json({ 
+                error: 'Servicio no disponible temporalmente',
+                message: 'La base de datos no está conectada.'
+            });
+        }
+
+        const result = await pool.query('SELECT * FROM veterinarios WHERE id = $1', [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const user = result.rows[0];
+        
+        // Verificar período de prueba
+        let trialStatus = null;
+        let needsActivation = false;
+        
+        if (user.tipo_cuenta === 'prueba' && user.fecha_fin_prueba) {
+            const hoy = new Date();
+            const finPrueba = new Date(user.fecha_fin_prueba);
+            const diasRestantes = Math.ceil((finPrueba - hoy) / (1000 * 60 * 60 * 24));
+            
+            trialStatus = {
+                is_trial: true,
+                trial_end_date: user.fecha_fin_prueba,
+                days_remaining: diasRestantes > 0 ? diasRestantes : 0,
+                trial_expired: diasRestantes <= 0
+            };
+            
+            // Si el período de prueba expiró, necesita activación
+            if (diasRestantes <= 0) {
+                needsActivation = true;
+            }
+        } else if (!user.licencia_activa) {
+            // Si no es prueba y no tiene licencia activa
+            needsActivation = true;
+        }
+
+        res.json({
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre_veterinario,
+                nombre_veterinaria: user.nombre_veterinaria,
+                tipo_cuenta: user.tipo_cuenta,
+                licencia_activa: user.licencia_activa
+            },
+            trial_status: trialStatus,
+            needs_activation: needsActivation,
+            contact_info: {
+                email: 'jjvserviciosinformaticos@gmail.com',
+                phone: '+54 9 11 1234-5678'
+            }
+        });
+    } catch (error) {
+        console.error('Error verificando licencia:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
