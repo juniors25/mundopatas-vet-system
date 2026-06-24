@@ -14,9 +14,41 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
 // Variable para controlar si el cron automático está habilitado
 const CRON_ENABLED = process.env.ENABLE_AUTO_CRON === 'true';
 
+// Variable para controlar si la base de datos está conectada
+let databaseConnected = false;
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware de logging global para identificar errores
+app.use((req, res, next) => {
+    console.log(`📝 ${req.method} ${req.url} - IP: ${req.ip}`);
+    
+    // Capturar errores en la respuesta
+    const originalSend = res.send;
+    res.send = function(data) {
+        if (res.statusCode === 500) {
+            console.error(`❌ ERROR 500 en ${req.method} ${req.url}`);
+            console.error(`📝 Response data:`, data);
+        }
+        return originalSend.call(this, data);
+    };
+    
+    next();
+});
+
+// Middleware de manejo de errores global
+app.use((err, req, res, next) => {
+    console.error(`❌ Error global en ${req.method} ${req.url}:`, err);
+    res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor',
+        message: 'Ocurrió un error inesperado',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 app.use(express.static('public'));
 
 // Configurar multer para subida de archivos
@@ -97,8 +129,16 @@ function authenticateToken(req, res, next) {
     }
 }
 
-// Inicializar base de datos
-initializeDatabase().catch(console.error);
+// Inicializar base de datos de forma asíncrona sin bloquear el inicio
+initializeDatabase()
+    .then(() => {
+        databaseConnected = true;
+        console.log('✅ Base de datos inicializada correctamente');
+    })
+    .catch((error) => {
+        console.error('⚠️  Error al inicializar la base de datos (servidor funcionará en modo limitado):', error.message);
+        console.log('⚠️  Algunas funciones pueden no estar disponibles hasta conectar la base de datos');
+    });
 
 // RUTA DE CONFIGURACIÓN DE LA APP
 app.get('/api/app-config', (req, res) => {
@@ -257,20 +297,50 @@ app.post('/api/mascotas', authenticateToken, async (req, res) => {
 
 app.get('/api/mascotas', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(`
+        // Primero obtener mascotas básicas sin JOIN
+        const mascotasBasic = await pool.query(`
             SELECT 
-                m.id, m.veterinario_id, m.cliente_id, m.nombre, m.especie, m.raza, 
-                m.edad, m.peso, m.pelaje as color, m.sexo, m.observaciones,
-                m.tiene_chip, m.numero_chip, m.tipo_alimento, m.marca_alimento,
-                m.peso_bolsa_kg, m.fecha_inicio_bolsa, m.gramos_diarios, m.created_at,
-                c.nombre as cliente_nombre, c.apellido as cliente_apellido 
-            FROM mascotas m 
-            JOIN clientes c ON m.cliente_id = c.id 
-            WHERE m.veterinario_id = $1 
-            ORDER BY m.created_at DESC
+                id, veterinario_id, cliente_id, nombre, especie, raza, 
+                edad, peso, pelaje as color, sexo, observaciones,
+                tiene_chip, numero_chip, tipo_alimento, marca_alimento,
+                peso_bolsa_kg, fecha_inicio_bolsa, gramos_diarios, created_at
+            FROM mascotas 
+            WHERE veterinario_id = $1 
+            ORDER BY created_at DESC
         `, [req.user.id]);
         
-        res.json(result.rows);
+        // Si hay mascotas, obtener información de clientes
+        if (mascotasBasic.rows.length > 0) {
+            const mascotasConInfo = [];
+            
+            for (const mascota of mascotasBasic.rows) {
+                // Obtener información del cliente
+                let clienteInfo = { nombre: 'Cliente desconocido', apellido: '' };
+                try {
+                    const clienteResult = await pool.query(
+                        'SELECT nombre, apellido FROM clientes WHERE id = $1 AND veterinario_id = $2',
+                        [mascota.cliente_id, req.user.id]
+                    );
+                    if (clienteResult.rows.length > 0) {
+                        clienteInfo = clienteResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo cliente:', error.message);
+                }
+                
+                mascotasConInfo.push({
+                    ...mascota,
+                    cliente_nombre: clienteInfo.nombre,
+                    cliente_apellido: clienteInfo.apellido
+                });
+            }
+            
+            res.json(mascotasConInfo);
+        } else {
+            // No hay mascotas, devolver array vacío
+            res.json([]);
+        }
+        
     } catch (error) {
         console.error('Error obteniendo mascotas:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -279,30 +349,76 @@ app.get('/api/mascotas', authenticateToken, async (req, res) => {
 
 // RUTAS DE CONSULTAS
 
-// Obtener todas las consultas del veterinario autenticado
 app.get('/api/consultas', authenticateToken, async (req, res) => {
     console.log(`📋 Obteniendo consultas para el veterinario ID: ${req.user.id}`);
     
     try {
-        const result = await pool.query(`
-            SELECT c.*, 
-                   m.nombre as nombre_mascota, m.especie,
-                   cl.nombre as nombre_cliente, cl.apellido as apellido_cliente
-            FROM consultas c
-            JOIN mascotas m ON c.mascota_id = m.id
-            JOIN clientes cl ON c.cliente_id = cl.id
-            WHERE c.veterinario_id = $1
-            ORDER BY c.fecha_consulta DESC
+        // Primero verificar si hay consultas para este veterinario
+        const consultasBasic = await pool.query(`
+            SELECT id, mascota_id, cliente_id, motivo, observaciones, fecha_consulta
+            FROM consultas 
+            WHERE veterinario_id = $1 
+            ORDER BY fecha_consulta DESC 
             LIMIT 100
         `, [req.user.id]);
         
-        console.log(`✅ Se encontraron ${result.rows.length} consultas`);
+        console.log(`✅ Se encontraron ${consultasBasic.rows.length} consultas básicas`);
         
-        res.json({
-            success: true,
-            count: result.rows.length,
-            consultas: result.rows
-        });
+        // Si hay consultas, obtener información adicional
+        if (consultasBasic.rows.length > 0) {
+            const consultasConInfo = [];
+            
+            for (const consulta of consultasBasic.rows) {
+                // Obtener información de mascota
+                let mascotaInfo = { nombre: 'Mascota desconocida', especie: 'Desconocida' };
+                try {
+                    const mascotaResult = await pool.query(
+                        'SELECT nombre, especie FROM mascotas WHERE id = $1 AND veterinario_id = $2',
+                        [consulta.mascota_id, req.user.id]
+                    );
+                    if (mascotaResult.rows.length > 0) {
+                        mascotaInfo = mascotaResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo mascota:', error.message);
+                }
+                
+                // Obtener información de cliente
+                let clienteInfo = { nombre: 'Cliente desconocido', apellido: '' };
+                try {
+                    const clienteResult = await pool.query(
+                        'SELECT nombre, apellido FROM clientes WHERE id = $1 AND veterinario_id = $2',
+                        [consulta.cliente_id, req.user.id]
+                    );
+                    if (clienteResult.rows.length > 0) {
+                        clienteInfo = clienteResult.rows[0];
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo cliente:', error.message);
+                }
+                
+                consultasConInfo.push({
+                    ...consulta,
+                    nombre_mascota: mascotaInfo.nombre,
+                    especie: mascotaInfo.especie,
+                    nombre_cliente: clienteInfo.nombre,
+                    apellido_cliente: clienteInfo.apellido
+                });
+            }
+            
+            res.json({
+                success: true,
+                count: consultasConInfo.length,
+                consultas: consultasConInfo
+            });
+        } else {
+            // No hay consultas, devolver array vacío
+            res.json({
+                success: true,
+                count: 0,
+                consultas: []
+            });
+        }
         
     } catch (error) {
         console.error('❌ Error al obtener consultas:', error);
@@ -366,8 +482,65 @@ const devAuth = (req, res, next) => {
     });
 };
 
+// Middleware de autenticación específico para consultas
+const authConsulta = (req, res, next) => {
+    try {
+        // En desarrollo, usar autenticación simulada
+        if (process.env.NODE_ENV !== 'production') {
+            req.user = { 
+                id: 1, 
+                email: 'consulta@ejemplo.com',
+                role: 'admin',
+                nombre: 'Usuario',
+                apellido: 'Consulta'
+            };
+            console.log('🔧 Modo desarrollo: Usuario simulado para consulta');
+            return next();
+        }
+
+        // En producción, verificar token
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        
+        if (!token) {
+            console.error('❌ No se proporcionó token de autenticación para consulta');
+            return res.status(401).json({
+                success: false,
+                error: 'Token de acceso requerido',
+                message: 'Debes iniciar sesión para acceder a este recurso',
+                requiresAuth: true
+            });
+        }
+
+        // Verificar token JWT
+        jwt.verify(token, JWT_SECRET, (err, user) => {
+            if (err) {
+                console.error('❌ Error al verificar el token de consulta:', err.message);
+                return res.status(401).json({
+                    success: false,
+                    error: 'Sesión expirada',
+                    message: 'Tu sesión ha expirado, por favor inicia sesión nuevamente',
+                    requiresAuth: true
+                });
+            }
+            
+            // Token válido
+            req.user = user;
+            console.log(`🔑 Consulta - Usuario autenticado: ${user.email || 'ID: ' + user.id}`);
+            next();
+        });
+    } catch (error) {
+        console.error('❌ Error en middleware de autenticación de consulta:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Error de autenticación',
+            message: 'Ocurrió un error al verificar la autenticación'
+        });
+    }
+};
+
 // Endpoint para crear una nueva consulta
-app.post('/api/consultas', devAuth, async (req, res) => {
+app.post('/api/consultas', authConsulta, async (req, res) => {
     try {
         console.log('📝 Datos recibidos para nueva consulta:', req.body);
         console.log('👤 Usuario autenticado:', req.user);
@@ -444,35 +617,9 @@ app.post('/api/consultas', devAuth, async (req, res) => {
         
         const result = await pool.query(
             `INSERT INTO consultas (
-                veterinario_id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones, fecha_consulta, estado
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                $29, $30, $31, $32, $33, $34, $35, $36, NOW(), 'completada'
-            ) RETURNING *`,
-            [
-                req.user.id, cliente_id, mascota_id, motivo,
-                estado_corporal, manto_piloso, tiempo_llenado_capilar,
-                frecuencia_cardiaca, frecuencia_respiratoria, peso, temperatura,
-                ganglios_linfaticos, tonalidad_mucosa, examen_bucal, examen_ocular,
-                examen_otico, examen_neurologico, examen_aparato_locomotor,
-                tipo_analisis, fecha_analisis, resultados_analisis, archivo_analisis_url,
-                electrocardiograma, medicion_presion_arterial, ecocardiograma,
-                desparasitacion, fecha_desparasitacion, producto_desparasitacion, proxima_desparasitacion,
-                diagnostico_presuntivo, diagnostico_final,
-                medicamento, dosis, intervalo, tratamiento_inyectable,
-                observaciones
-            ]
+                veterinario_id, cliente_id, mascota_id, motivo, observaciones, fecha_consulta
+            ) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
+            [req.user.id, cliente_id, mascota_id, motivo, observaciones]
         );
         
         console.log('✅ Consulta registrada exitosamente:', result.rows[0]);
@@ -3387,6 +3534,135 @@ if (CRON_ENABLED) {
     console.log('ℹ️  Bot automático deshabilitado. Usar Task Scheduler o ejecutar manualmente.');
 }
 
+// RUTAS DE VACUNAS
+app.get('/api/vacunas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT v.*, m.nombre as nombre_mascota, m.especie, 
+                   c.nombre as nombre_cliente, c.apellido as apellido_cliente
+            FROM vacunas v
+            JOIN mascotas m ON v.mascota_id = m.id
+            JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.veterinario_id = $1
+            ORDER BY v.fecha_vacunacion DESC
+            LIMIT 100
+        `, [req.user.id]);
+        
+        // Devolver array directamente para compatibilidad con frontend
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo vacunas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al obtener las vacunas',
+            message: 'Ocurrió un error al intentar recuperar las vacunas'
+        });
+    }
+});
+
+app.get('/api/vacunas/:mascota_id', authenticateToken, async (req, res) => {
+    try {
+        const { mascota_id } = req.params;
+        
+        // Verificar que la mascota pertenece al veterinario
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Mascota no encontrada',
+                message: 'La mascota no existe o no pertenece a tu lista de pacientes'
+            });
+        }
+        
+        const result = await pool.query(`
+            SELECT * FROM vacunas 
+            WHERE mascota_id = $1 AND veterinario_id = $2
+            ORDER BY fecha_vacunacion DESC
+        `, [mascota_id, req.user.id]);
+        
+        // Devolver array directamente para compatibilidad con frontend
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo vacunas de mascota:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al obtener las vacunas de la mascota',
+            message: 'Ocurrió un error al intentar recuperar las vacunas'
+        });
+    }
+});
+
+app.post('/api/vacunas', authenticateToken, async (req, res) => {
+    try {
+        const { 
+            mascota_id, tipo_vacuna, fecha_vacunacion, 
+            proxima_vacunacion, veterinario_aplicante, lote_vacuna,
+            observaciones 
+        } = req.body;
+        
+        if (!mascota_id || !tipo_vacuna || !fecha_vacunacion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Datos incompletos',
+                message: 'La mascota, tipo de vacuna y fecha son obligatorios'
+            });
+        }
+        
+        // Verificar que la mascota pertenece al veterinario
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(403).json({
+                success: false,
+                error: 'No autorizado',
+                message: 'No tienes permiso para agregar vacunas a esta mascota'
+            });
+        }
+        
+        const result = await pool.query(`
+            INSERT INTO vacunas (
+                veterinario_id, cliente_id, mascota_id, tipo_vacuna, 
+                fecha_vacunacion, proxima_vacunacion, veterinario_aplicante,
+                lote_vacuna, observaciones, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *
+        `, [
+            req.user.id, 
+            mascotaCheck.rows[0].cliente_id, 
+            mascota_id, 
+            tipo_vacuna, 
+            fecha_vacunacion, 
+            proxima_vacunacion, 
+            veterinario_aplicante, 
+            lote_vacuna, 
+            observaciones
+        ]);
+        
+        res.status(201).json({
+            success: true,
+            message: 'Vacuna registrada exitosamente',
+            vacuna: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error registrando vacuna:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al registrar la vacuna',
+            message: 'Ocurrió un error al intentar registrar la vacuna'
+        });
+    }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log('');
@@ -3397,7 +3673,7 @@ app.listen(PORT, () => {
     console.log(`📱 Accede a: http://localhost:${PORT}`);
     console.log(`🌐 Landing comercial: http://localhost:${PORT}/landing-comercial.html`);
     console.log(`🤖 Bot automático: ${CRON_ENABLED ? 'HABILITADO (9:00 AM)' : 'DESHABILITADO'}`);
-    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`═══════════════════════════════════════════════════════════`);
     console.log('');
 });
 
