@@ -1,0 +1,35 @@
+{
+  "binance": {
+    "api_key": "",
+    "secret_key": "",
+    "wallet_address": "",
+    "network": "BTC"
+  },
+  "faucets": {
+    "freebitcoin": {
+      "username": "",
+      "password": "",
+      "wallet_address": ""
+    },
+    "firefaucet": {
+      "username": "",
+      "password": "",
+      "wallet_address": ""
+    },
+    "cointiply": {
+      "username": "",
+      "password": "",
+      "wallet_address": ""
+    },
+    "allcoins": {
+      "username": "",
+      "password": "",
+      "wallet_address": ""
+    },
+    "claimfreecoins": {
+      "username": "",
+      "password": "",
+      "wallet_address": ""
+    }
+  }
+}

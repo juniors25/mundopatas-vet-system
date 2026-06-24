@@ -14,6 +14,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mundo-patas-secret-key';
 // Variable para controlar si el cron automático está habilitado
 const CRON_ENABLED = process.env.ENABLE_AUTO_CRON === 'true';
 
+// Variable para controlar si la base de datos está conectada
+let databaseConnected = false;
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -126,8 +129,16 @@ function authenticateToken(req, res, next) {
     }
 }
 
-// Inicializar base de datos
-initializeDatabase().catch(console.error);
+// Inicializar base de datos de forma asíncrona sin bloquear el inicio
+initializeDatabase()
+    .then(() => {
+        databaseConnected = true;
+        console.log('✅ Base de datos inicializada correctamente');
+    })
+    .catch((error) => {
+        console.error('⚠️  Error al inicializar la base de datos (servidor funcionará en modo limitado):', error.message);
+        console.log('⚠️  Algunas funciones pueden no estar disponibles hasta conectar la base de datos');
+    });
 
 // RUTA DE CONFIGURACIÓN DE LA APP
 app.get('/api/app-config', (req, res) => {
