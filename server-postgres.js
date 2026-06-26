@@ -164,13 +164,6 @@ app.post('/api/auth/register', async (req, res) => {
     const { nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion } = req.body;
 
     try {
-        // Verificar si la base de datos está conectada
-        if (!databaseConnected) {
-            return res.status(503).json({ 
-                error: 'Servicio no disponible temporalmente',
-                message: 'La base de datos no está conectada. Por favor, intenta nuevamente en unos minutos.'
-            });
-        }
 
         // Verificar si el email ya existe
         const existingUser = await pool.query('SELECT id FROM veterinarios WHERE email = $1', [email]);
@@ -223,13 +216,6 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Verificar si la base de datos está conectada
-        if (!databaseConnected) {
-            return res.status(503).json({ 
-                error: 'Servicio no disponible temporalmente',
-                message: 'La base de datos no está conectada. Por favor, intenta nuevamente en unos minutos.'
-            });
-        }
 
         const result = await pool.query('SELECT * FROM veterinarios WHERE email = $1', [email]);
         
@@ -287,12 +273,6 @@ app.post('/api/login', async (req, res) => {
 // Endpoint para verificar estado de licencia
 app.get('/api/license/status', authenticateToken, async (req, res) => {
     try {
-        if (!databaseConnected) {
-            return res.status(503).json({ 
-                error: 'Servicio no disponible temporalmente',
-                message: 'La base de datos no está conectada.'
-            });
-        }
 
         const result = await pool.query('SELECT * FROM veterinarios WHERE id = $1', [req.user.id]);
         

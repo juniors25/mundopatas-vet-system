@@ -4,7 +4,9 @@ const path = require('path');
 // Configuración de la base de datos
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Forzar IPv4 para evitar problemas con IPv6 en Railway
+    client_encoding: 'UTF8'
 });
 
 // Función para inicializar la base de datos
@@ -29,6 +31,10 @@ async function initializeDatabase() {
                 telefono TEXT,
                 direccion TEXT,
                 rol TEXT DEFAULT 'admin',
+                -- Sistema de licencias y prueba
+                tipo_cuenta TEXT DEFAULT 'prueba',
+                licencia_activa BOOLEAN DEFAULT false,
+                fecha_fin_prueba TIMESTAMP,
                 -- Configuración de pagos
                 cbu_cvu TEXT,
                 alias_cbu TEXT,
