@@ -4,9 +4,7 @@ const path = require('path');
 // Configuración de la base de datos
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    // Forzar IPv4 para evitar problemas con IPv6 en Railway
-    family: 4
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Función para inicializar la base de datos
