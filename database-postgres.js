@@ -6,10 +6,7 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     // Forzar IPv4 para evitar problemas con IPv6 en Railway
-    client_encoding: 'UTF8',
-    connection: {
-        family: 4 // Forzar IPv4
-    }
+    family: 4
 });
 
 // Función para inicializar la base de datos
