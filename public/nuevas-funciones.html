@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .stat-card {
             border-left: 4px solid;
@@ -440,6 +442,293 @@
             }
         }
 
+        // ==================== FUNCIONES DE CITAS ====================
+        
+        async function loadCitas() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/citas`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar citas');
+
+                const citas = await response.json();
+                const tbody = document.querySelector('#citas-table tbody');
+                tbody.innerHTML = '';
+
+                citas.forEach(cita => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${cita.fecha}</td>
+                            <td>${cita.hora}</td>
+                            <td>${cita.cliente_nombre} ${cita.cliente_apellido}</td>
+                            <td>${cita.mascota_nombre}</td>
+                            <td>${cita.motivo}</td>
+                            <td><span class="badge bg-${cita.estado === 'programada' ? 'primary' : 'secondary'}">${cita.estado}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="actualizarCita(${cita.id})">Actualizar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function crearCita() {
+            const clienteId = document.getElementById('cita-cliente').value;
+            const mascotaId = document.getElementById('cita-mascota').value;
+            const fecha = document.getElementById('cita-fecha').value;
+            const hora = document.getElementById('cita-hora').value;
+            const motivo = document.getElementById('cita-motivo').value;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/citas`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cliente_id: clienteId,
+                        mascota_id: mascotaId,
+                        fecha,
+                        hora,
+                        motivo,
+                        pago_obligatorio: true,
+                        monto_pago: 5000
+                    })
+                });
+
+                if (!response.ok) throw new Error('Error al crear cita');
+
+                alert('Cita creada exitosamente');
+                loadCitas();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al crear cita');
+            }
+        }
+
+        async function actualizarCita(id) {
+            const estado = prompt('Estado (programada/completada/cancelada):');
+            if (!estado) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/citas/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ estado })
+                });
+
+                if (!response.ok) throw new Error('Error al actualizar cita');
+
+                alert('Cita actualizada');
+                loadCitas();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar cita');
+            }
+        }
+
+        // ==================== FUNCIONES DE FACTURACIÓN ====================
+        
+        async function loadFacturas() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/facturas`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar facturas');
+
+                const facturas = await response.json();
+                const tbody = document.querySelector('#facturas-table tbody');
+                tbody.innerHTML = '';
+
+                facturas.forEach(factura => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${factura.numero_factura}</td>
+                            <td>${factura.fecha_emision}</td>
+                            <td>${factura.cliente_nombre} ${factura.cliente_apellido}</td>
+                            <td>$${factura.total.toFixed(2)}</td>
+                            <td><span class="badge bg-${factura.estado === 'pagada' ? 'success' : 'warning'}">${factura.estado}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // ==================== FUNCIONES DE HOSPITALIZACIÓN ====================
+        
+        async function loadHospitalizaciones() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/hospitalizaciones`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar hospitalizaciones');
+
+                const hospitalizaciones = await response.json();
+                const tbody = document.querySelector('#hospitalizaciones-table tbody');
+                tbody.innerHTML = '';
+
+                hospitalizaciones.forEach(h => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${h.fecha_ingreso}</td>
+                            <td>${h.cliente_nombre} ${h.cliente_apellido}</td>
+                            <td>${h.mascota_nombre}</td>
+                            <td>${h.motivo_ingreso}</td>
+                            <td><span class="badge bg-${h.estado === 'activa' ? 'danger' : 'success'}">${h.estado}</span></td>
+                            <td>
+                                ${h.estado === 'activa' ? `<button class="btn btn-sm btn-success" onclick="darAlta(${h.id})">Dar Alta</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function darAlta(id) {
+            const notas = prompt('Notas de alta:');
+            if (!notas) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/hospitalizaciones/${id}/alta`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notas_alta: notas, costo_total: 0 })
+                });
+
+                if (!response.ok) throw new Error('Error al dar de alta');
+
+                alert('Alta registrada');
+                loadHospitalizaciones();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al dar de alta');
+            }
+        }
+
+        // ==================== FUNCIONES DE REFERIDOS ====================
+        
+        async function loadReferidos() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/referidos/enviados`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar referidos');
+
+                const referidos = await response.json();
+                const tbody = document.querySelector('#referidos-table tbody');
+                tbody.innerHTML = '';
+
+                referidos.forEach(r => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${r.fecha_referido}</td>
+                            <td>${r.cliente_nombre} ${r.cliente_apellido}</td>
+                            <td>${r.mascota_nombre}</td>
+                            <td>${r.motivo}</td>
+                            <td>${r.veterinario_destino_nombre}</td>
+                            <td><span class="badge bg-${r.estado === 'pendiente' ? 'warning' : 'success'}">${r.estado}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // ==================== FUNCIONES DE LABORATORIOS ====================
+        
+        async function loadLaboratorios() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/laboratorios/integracion`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar laboratorios');
+
+                const laboratorios = await response.json();
+                const tbody = document.querySelector('#laboratorios-table tbody');
+                tbody.innerHTML = '';
+
+                laboratorios.forEach(lab => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${lab.nombre_laboratorio}</td>
+                            <td>${lab.tipo_laboratorio}</td>
+                            <td><span class="badge bg-${lab.estado === 'activo' ? 'success' : 'secondary'}">${lab.estado}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // ==================== FUNCIONES DE RECOMENDACIONES IA ====================
+        
+        async function generarRecomendaciones() {
+            const clienteId = document.getElementById('rec-cliente').value;
+            const mascotaId = document.getElementById('rec-mascota').value;
+            const situacion = document.getElementById('rec-situacion').value;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${window.location.origin}/api/recomendaciones/generar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cliente_id: clienteId,
+                        mascota_id: mascotaId,
+                        tipo_situacion: situacion
+                    })
+                });
+
+                if (!response.ok) throw new Error('Error al generar recomendaciones');
+
+                const rec = await response.json();
+                const productos = JSON.parse(rec.productos_recomendados);
+                
+                let html = '<h5>Productos Recomendados:</h5><ul>';
+                productos.forEach(p => {
+                    html += `<li><strong>${p.nombre}</strong> - ${p.categoria} (Prioridad: ${p.prioridad})</li>`;
+                });
+                html += '</ul>';
+                
+                document.getElementById('recomendaciones-result').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al generar recomendaciones');
+            }
+        }
+
         // Funciones placeholder para secciones no implementadas
         function loadInventario() {
             console.log('Cargando inventario...');
@@ -476,11 +765,51 @@
         }
 
         function exportarPDF() {
-            alert('Exportar a PDF - Funcionalidad en desarrollo');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(20);
+            doc.text('Reporte - Mundo Patas', 20, 20);
+            
+            // Fecha
+            doc.setFontSize(12);
+            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
+            
+            // Obtener datos del dashboard
+            const ingresos = document.getElementById('ingresos-mes').textContent;
+            const consultas = document.getElementById('consultas-mes').textContent;
+            const citas = document.getElementById('citas-pendientes').textContent;
+            const stock = document.getElementById('stock-bajo').textContent;
+            
+            // Agregar datos
+            doc.setFontSize(14);
+            doc.text('Resumen del Mes', 20, 50);
+            
+            doc.setFontSize(12);
+            doc.text(`Ingresos del mes: ${ingresos}`, 20, 65);
+            doc.text(`Consultas realizadas: ${consultas}`, 20, 75);
+            doc.text(`Citas pendientes: ${citas}`, 20, 85);
+            doc.text(`Productos con stock bajo: ${stock}`, 20, 95);
+            
+            // Guardar
+            doc.save('reporte-mundopatas.pdf');
         }
 
         function exportarExcel() {
-            alert('Exportar a Excel - Funcionalidad en desarrollo');
+            const datos = [
+                ['Métrica', 'Valor'],
+                ['Ingresos del mes', document.getElementById('ingresos-mes').textContent],
+                ['Consultas realizadas', document.getElementById('consultas-mes').textContent],
+                ['Citas pendientes', document.getElementById('citas-pendientes').textContent],
+                ['Productos con stock bajo', document.getElementById('stock-bajo').textContent],
+                ['Fecha', new Date().toLocaleDateString()]
+            ];
+            
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+            XLSX.writeFile(wb, 'reporte-mundopatas.xlsx');
         }
 
         function showMedicamentoModal() {
