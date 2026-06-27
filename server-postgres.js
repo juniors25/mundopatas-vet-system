@@ -164,6 +164,7 @@ app.post('/api/auth/register', async (req, res) => {
     const { nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion } = req.body;
 
     try {
+
         // Verificar si el email ya existe
         const existingUser = await pool.query('SELECT id FROM veterinarios WHERE email = $1', [email]);
         
@@ -174,10 +175,13 @@ app.post('/api/auth/register', async (req, res) => {
         // Encriptar contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insertar nuevo veterinario
+        // Insertar nuevo veterinario con período de prueba de 15 días
+        const fecha_prueba = new Date();
+        fecha_prueba.setDate(fecha_prueba.getDate() + 15); // 15 días de prueba
+
         const result = await pool.query(
-            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion]
+            'INSERT INTO veterinarios (nombre_veterinaria, nombre_veterinario, email, password, telefono, direccion, tipo_cuenta, fecha_fin_prueba) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [nombre_veterinaria, nombre_veterinario, email, hashedPassword, telefono, direccion, 'prueba', fecha_prueba]
         );
 
         const user = result.rows[0];
@@ -185,6 +189,9 @@ app.post('/api/auth/register', async (req, res) => {
 
         res.json({
             message: 'Veterinario registrado exitosamente',
+            trial_period: true,
+            trial_end_date: fecha_prueba,
+            trial_days: 15,
             token,
             user: {
                 id: user.id,
@@ -195,7 +202,8 @@ app.post('/api/auth/register', async (req, res) => {
                 telefono: user.telefono,
                 direccion: user.direccion,
                 tipo_cuenta: user.tipo_cuenta,
-                licencia_activa: user.licencia_activa
+                licencia_activa: user.licencia_activa,
+                fecha_fin_prueba: user.fecha_fin_prueba
             }
         });
     } catch (error) {
@@ -208,6 +216,7 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+
         const result = await pool.query('SELECT * FROM veterinarios WHERE email = $1', [email]);
         
         if (result.rows.length === 0) {
@@ -221,10 +230,26 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        // Verificar período de prueba
+        let trialStatus = null;
+        if (user.tipo_cuenta === 'prueba' && user.fecha_fin_prueba) {
+            const hoy = new Date();
+            const finPrueba = new Date(user.fecha_fin_prueba);
+            const diasRestantes = Math.ceil((finPrueba - hoy) / (1000 * 60 * 60 * 24));
+            
+            trialStatus = {
+                is_trial: true,
+                trial_end_date: user.fecha_fin_prueba,
+                days_remaining: diasRestantes > 0 ? diasRestantes : 0,
+                trial_expired: diasRestantes <= 0
+            };
+        }
+
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
 
         res.json({
             message: 'Login exitoso',
+            trial_status: trialStatus,
             token,
             user: {
                 id: user.id,
@@ -235,11 +260,71 @@ app.post('/api/login', async (req, res) => {
                 telefono: user.telefono,
                 direccion: user.direccion,
                 tipo_cuenta: user.tipo_cuenta,
-                licencia_activa: user.licencia_activa
+                licencia_activa: user.licencia_activa,
+                fecha_fin_prueba: user.fecha_fin_prueba
             }
         });
     } catch (error) {
         console.error('Error en login:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Endpoint para verificar estado de licencia
+app.get('/api/license/status', authenticateToken, async (req, res) => {
+    try {
+
+        const result = await pool.query('SELECT * FROM veterinarios WHERE id = $1', [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const user = result.rows[0];
+        
+        // Verificar período de prueba
+        let trialStatus = null;
+        let needsActivation = false;
+        
+        if (user.tipo_cuenta === 'prueba' && user.fecha_fin_prueba) {
+            const hoy = new Date();
+            const finPrueba = new Date(user.fecha_fin_prueba);
+            const diasRestantes = Math.ceil((finPrueba - hoy) / (1000 * 60 * 60 * 24));
+            
+            trialStatus = {
+                is_trial: true,
+                trial_end_date: user.fecha_fin_prueba,
+                days_remaining: diasRestantes > 0 ? diasRestantes : 0,
+                trial_expired: diasRestantes <= 0
+            };
+            
+            // Si el período de prueba expiró, necesita activación
+            if (diasRestantes <= 0) {
+                needsActivation = true;
+            }
+        } else if (!user.licencia_activa) {
+            // Si no es prueba y no tiene licencia activa
+            needsActivation = true;
+        }
+
+        res.json({
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre_veterinario,
+                nombre_veterinaria: user.nombre_veterinaria,
+                tipo_cuenta: user.tipo_cuenta,
+                licencia_activa: user.licencia_activa
+            },
+            trial_status: trialStatus,
+            needs_activation: needsActivation,
+            contact_info: {
+                email: 'jjvserviciosinformaticos@gmail.com',
+                phone: '+54 9 11 1234-5678'
+            }
+        });
+    } catch (error) {
+        console.error('Error verificando licencia:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -3660,6 +3745,391 @@ app.post('/api/vacunas', authenticateToken, async (req, res) => {
             error: 'Error al registrar la vacuna',
             message: 'Ocurrió un error al intentar registrar la vacuna'
         });
+    }
+});
+
+// ==================== NUEVAS FUNCIONALIDADES ====================
+
+// ==================== CITAS ====================
+
+// Listar citas
+app.get('/api/citas', authenticateToken, async (req, res) => {
+    try {
+        const { estado, fecha_desde, fecha_hasta } = req.query;
+        
+        let query = `
+            SELECT c.*, 
+                   cl.nombre as cliente_nombre, cl.apellido as cliente_apellido,
+                   m.nombre as mascota_nombre, m.especie
+            FROM citas c
+            JOIN clientes cl ON c.cliente_id = cl.id
+            JOIN mascotas m ON c.mascota_id = m.id
+            WHERE c.veterinario_id = $1
+        `;
+        const params = [req.user.id];
+        let paramCount = 1;
+        
+        if (estado) {
+            paramCount++;
+            query += ` AND c.estado = $${paramCount}`;
+            params.push(estado);
+        }
+        
+        if (fecha_desde) {
+            paramCount++;
+            query += ` AND c.fecha >= $${paramCount}`;
+            params.push(fecha_desde);
+        }
+        
+        if (fecha_hasta) {
+            paramCount++;
+            query += ` AND c.fecha <= $${paramCount}`;
+            params.push(fecha_hasta);
+        }
+        
+        query += ' ORDER BY c.fecha DESC, c.hora ASC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo citas:', error);
+        res.status(500).json({ error: 'Error al obtener citas' });
+    }
+});
+
+// Crear cita
+app.post('/api/citas', authenticateToken, async (req, res) => {
+    try {
+        const { cliente_id, mascota_id, fecha, hora, motivo, pago_obligatorio, monto_pago } = req.body;
+        
+        // Verificar que el cliente pertenece al veterinario
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [cliente_id, req.user.id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Cliente no encontrado' });
+        }
+        
+        const result = await pool.query(`
+            INSERT INTO citas (veterinario_id, cliente_id, mascota_id, fecha, hora, motivo, pago_obligatorio, monto_pago)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [req.user.id, cliente_id, mascota_id, fecha, hora, motivo, pago_obligatorio, monto_pago]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error creando cita:', error);
+        res.status(500).json({ error: 'Error al crear cita' });
+    }
+});
+
+// Actualizar cita
+app.put('/api/citas/:id', authenticateToken, async (req, res) => {
+    try {
+        const { estado, estado_pago, notas } = req.body;
+        
+        const result = await pool.query(`
+            UPDATE citas SET
+                estado = COALESCE($1, estado),
+                estado_pago = COALESCE($2, estado_pago),
+                notas = COALESCE($3, notas),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4 AND veterinario_id = $5
+            RETURNING *
+        `, [estado, estado_pago, notas, req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cita no encontrada' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error actualizando cita:', error);
+        res.status(500).json({ error: 'Error al actualizar cita' });
+    }
+});
+
+// ==================== FACTURACIÓN ====================
+
+// Crear factura
+app.post('/api/facturas', authenticateToken, async (req, res) => {
+    try {
+        const { cliente_id, cita_id, items } = req.body;
+        
+        // Generar número de factura
+        const numeroFactura = `FAC-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        
+        // Calcular total
+        const total = items.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
+        
+        const result = await pool.query(`
+            INSERT INTO facturas (veterinario_id, cliente_id, cita_id, numero_factura, fecha_emision, total)
+            VALUES ($1, $2, $3, $4, CURRENT_DATE, $5)
+            RETURNING *
+        `, [req.user.id, cliente_id, cita_id, numeroFactura, total]);
+        
+        const factura = result.rows[0];
+        
+        // Agregar items
+        for (const item of items) {
+            await pool.query(`
+                INSERT INTO factura_items (factura_id, descripcion, cantidad, precio_unitario, subtotal, tipo_item)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [factura.id, item.descripcion, item.cantidad, item.precio_unitario, item.cantidad * item.precio_unitario, item.tipo_item]);
+        }
+        
+        res.status(201).json(factura);
+    } catch (error) {
+        console.error('Error creando factura:', error);
+        res.status(500).json({ error: 'Error al crear factura' });
+    }
+});
+
+// Listar facturas
+app.get('/api/facturas', authenticateToken, async (req, res) => {
+    try {
+        const { estado } = req.query;
+        
+        let query = `
+            SELECT f.*, cl.nombre as cliente_nombre, cl.apellido as cliente_apellido
+            FROM facturas f
+            JOIN clientes cl ON f.cliente_id = cl.id
+            WHERE f.veterinario_id = $1
+        `;
+        const params = [req.user.id];
+        
+        if (estado) {
+            query += ' AND f.estado = $2';
+            params.push(estado);
+        }
+        
+        query += ' ORDER BY f.fecha_emision DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo facturas:', error);
+        res.status(500).json({ error: 'Error al obtener facturas' });
+    }
+});
+
+// ==================== HOSPITALIZACIÓN ====================
+
+// Crear hospitalización
+app.post('/api/hospitalizaciones', authenticateToken, async (req, res) => {
+    try {
+        const { cliente_id, mascota_id, fecha_ingreso, motivo_ingreso, costo_diario } = req.body;
+        
+        const result = await pool.query(`
+            INSERT INTO hospitalizaciones (veterinario_id, cliente_id, mascota_id, fecha_ingreso, motivo_ingreso, costo_diario)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [req.user.id, cliente_id, mascota_id, fecha_ingreso, motivo_ingreso, costo_diario]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error creando hospitalización:', error);
+        res.status(500).json({ error: 'Error al crear hospitalización' });
+    }
+});
+
+// Listar hospitalizaciones activas
+app.get('/api/hospitalizaciones', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT h.*, cl.nombre as cliente_nombre, cl.apellido as cliente_apellido,
+                   m.nombre as mascota_nombre, m.especie
+            FROM hospitalizaciones h
+            JOIN clientes cl ON h.cliente_id = cl.id
+            JOIN mascotas m ON h.mascota_id = m.id
+            WHERE h.veterinario_id = $1 AND h.estado = 'activa'
+            ORDER BY h.fecha_ingreso DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo hospitalizaciones:', error);
+        res.status(500).json({ error: 'Error al obtener hospitalizaciones' });
+    }
+});
+
+// Alta de hospitalización
+app.put('/api/hospitalizaciones/:id/alta', authenticateToken, async (req, res) => {
+    try {
+        const { fecha_egreso, notas_alta, costo_total } = req.body;
+        
+        const result = await pool.query(`
+            UPDATE hospitalizaciones SET
+                fecha_egreso = COALESCE($1, CURRENT_DATE),
+                notas_alta = $2,
+                costo_total = $3,
+                estado = 'finalizada',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4 AND veterinario_id = $5
+            RETURNING *
+        `, [fecha_egreso, notas_alta, costo_total, req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Hospitalización no encontrada' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error dando de alta:', error);
+        res.status(500).json({ error: 'Error al dar de alta' });
+    }
+});
+
+// ==================== REFERIDOS ====================
+
+// Crear referido
+app.post('/api/referidos', authenticateToken, async (req, res) => {
+    try {
+        const { cliente_id, mascota_id, veterinario_destino_id, motivo, diagnostico_preliminar } = req.body;
+        
+        const result = await pool.query(`
+            INSERT INTO referidos (veterinario_origen_id, cliente_id, mascota_id, veterinario_destino_id, fecha_referido, motivo, diagnostico_preliminar)
+            VALUES ($1, $2, $3, $4, CURRENT_DATE, $5, $6)
+            RETURNING *
+        `, [req.user.id, cliente_id, mascota_id, veterinario_destino_id, motivo, diagnostico_preliminar]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error creando referido:', error);
+        res.status(500).json({ error: 'Error al crear referido' });
+    }
+});
+
+// Listar referidos enviados
+app.get('/api/referidos/enviados', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT r.*, 
+                   cl.nombre as cliente_nombre, cl.apellido as cliente_apellido,
+                   m.nombre as mascota_nombre,
+                   v_dest.nombre_veterinario as veterinario_destino_nombre, v_dest.email as veterinario_destino_email
+            FROM referidos r
+            JOIN clientes cl ON r.cliente_id = cl.id
+            JOIN mascotas m ON r.mascota_id = m.id
+            JOIN veterinarios v_dest ON r.veterinario_destino_id = v_dest.id
+            WHERE r.veterinario_origen_id = $1
+            ORDER BY r.fecha_referido DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo referidos:', error);
+        res.status(500).json({ error: 'Error al obtener referidos' });
+    }
+});
+
+// ==================== LABORATORIOS ====================
+
+// Configurar integración de laboratorio
+app.post('/api/laboratorios/integracion', authenticateToken, async (req, res) => {
+    try {
+        const { nombre_laboratorio, tipo_laboratorio, api_key, api_endpoint, configuracion } = req.body;
+        
+        const result = await pool.query(`
+            INSERT INTO laboratorios_integracion (veterinario_id, nombre_laboratorio, tipo_laboratorio, api_key, api_endpoint, configuracion)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [req.user.id, nombre_laboratorio, tipo_laboratorio, api_key, api_endpoint, JSON.stringify(configuracion)]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error configurando laboratorio:', error);
+        res.status(500).json({ error: 'Error al configurar laboratorio' });
+    }
+});
+
+// Solicitar análisis a laboratorio
+app.post('/api/laboratorios/solicitar', authenticateToken, async (req, res) => {
+    try {
+        const { mascota_id, laboratorio_id, tipo_analisis } = req.body;
+        
+        const result = await pool.query(`
+            INSERT INTO laboratorio_resultados (veterinario_id, mascota_id, laboratorio_id, fecha_solicitud, tipo_analisis, estado)
+            VALUES ($1, $2, $3, CURRENT_DATE, $4, 'pendiente')
+            RETURNING *
+        `, [req.user.id, mascota_id, laboratorio_id, tipo_analisis]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error solicitando análisis:', error);
+        res.status(500).json({ error: 'Error al solicitar análisis' });
+    }
+});
+
+// ==================== RECOMENDACIONES IA ====================
+
+// Generar recomendaciones de productos
+app.post('/api/recomendaciones/generar', authenticateToken, async (req, res) => {
+    try {
+        const { cliente_id, mascota_id, tipo_situacion } = req.body;
+        
+        // Algoritmo simple de recomendación basado en perfil
+        const productosRecomendados = [
+            { nombre: 'Alimento Premium', categoria: 'Nutrición', prioridad: 'alta' },
+            { nombre: 'Suplemento Vitaminas', categoria: 'Suplementos', prioridad: 'media' },
+            { nombre: 'Juguete Interactivo', categoria: 'Accesorios', prioridad: 'baja' }
+        ];
+        
+        const result = await pool.query(`
+            INSERT INTO recomendaciones_productos (veterinario_id, cliente_id, mascota_id, productos_recomendados, tipo_situacion)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `, [req.user.id, cliente_id, mascota_id, JSON.stringify(productosRecomendados), tipo_situacion]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error generando recomendaciones:', error);
+        res.status(500).json({ error: 'Error al generar recomendaciones' });
+    }
+});
+
+// ==================== REPORTES ====================
+
+// Dashboard de reportes
+app.get('/api/reportes/dashboard', authenticateToken, async (req, res) => {
+    try {
+        // Ingresos del mes
+        const ingresosMes = await pool.query(`
+            SELECT COALESCE(SUM(total), 0) as total
+            FROM facturas
+            WHERE veterinario_id = $1
+            AND DATE_TRUNC('month', fecha_emision) = DATE_TRUNC('month', CURRENT_DATE)
+        `, [req.user.id]);
+        
+        // Consultas del mes
+        const consultasMes = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM consultas
+            WHERE veterinario_id = $1
+            AND DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE)
+        `, [req.user.id]);
+        
+        // Citas pendientes
+        const citasPendientes = await pool.query(`
+            SELECT COUNT(*) as total
+            FROM citas
+            WHERE veterinario_id = $1 AND estado = 'programada' AND fecha >= CURRENT_DATE
+        `, [req.user.id]);
+        
+        // Stock bajo (simulado)
+        const stockBajo = 0;
+        
+        res.json({
+            ingresos_mes: parseFloat(ingresosMes.rows[0].total),
+            consultas_mes: parseInt(consultasMes.rows[0].total),
+            citas_pendientes: parseInt(citasPendientes.rows[0].total),
+            stock_bajo: stockBajo
+        });
+    } catch (error) {
+        console.error('Error obteniendo reportes:', error);
+        res.status(500).json({ error: 'Error al obtener reportes' });
     }
 });
 

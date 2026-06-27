@@ -29,6 +29,10 @@ async function initializeDatabase() {
                 telefono TEXT,
                 direccion TEXT,
                 rol TEXT DEFAULT 'admin',
+                -- Sistema de licencias y prueba
+                tipo_cuenta TEXT DEFAULT 'prueba',
+                licencia_activa BOOLEAN DEFAULT false,
+                fecha_fin_prueba TIMESTAMP,
                 -- Configuración de pagos
                 cbu_cvu TEXT,
                 alias_cbu TEXT,
@@ -893,6 +897,263 @@ async function initializeDatabase() {
             CREATE INDEX IF NOT EXISTS idx_mis_clientes_veterinario ON mis_clientes_ventas(veterinario_id);
             CREATE INDEX IF NOT EXISTS idx_mis_clientes_licencia ON mis_clientes_ventas(licencia_id);
             CREATE INDEX IF NOT EXISTS idx_historial_pagos_cliente ON historial_pagos_clientes(cliente_venta_id);
+
+        // ==================== TABLAS PARA NUEVAS FUNCIONALIDADES ====================
+
+        // Tabla de Citas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS citas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                
+                -- Datos de la cita
+                fecha DATE NOT NULL,
+                hora TIME NOT NULL,
+                motivo TEXT NOT NULL,
+                estado VARCHAR(50) DEFAULT 'programada',
+                
+                -- Datos de pago
+                pago_obligatorio BOOLEAN DEFAULT true,
+                monto_pago DECIMAL(10,2),
+                estado_pago VARCHAR(50) DEFAULT 'pendiente',
+                metodo_pago VARCHAR(50),
+                referencia_pago TEXT,
+                
+                -- Notas
+                notas TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Facturas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS facturas (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                cita_id INTEGER REFERENCES citas(id),
+                
+                -- Datos de la factura
+                numero_factura VARCHAR(100) UNIQUE NOT NULL,
+                fecha_emision DATE NOT NULL,
+                fecha_vencimiento DATE,
+                total DECIMAL(10,2) NOT NULL,
+                subtotal DECIMAL(10,2),
+                impuestos DECIMAL(10,2),
+                descuento DECIMAL(10,2),
+                
+                -- Estado
+                estado VARCHAR(50) DEFAULT 'pendiente',
+                estado_pago VARCHAR(50) DEFAULT 'pendiente',
+                
+                -- Integración ARCA
+                arca_id VARCHAR(100),
+                arca_caes TEXT,
+                arca_estado VARCHAR(50),
+                
+                -- Notas
+                notas TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Items de Factura
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS factura_items (
+                id SERIAL PRIMARY KEY,
+                factura_id INTEGER REFERENCES facturas(id) ON DELETE CASCADE,
+                
+                -- Datos del item
+                descripcion TEXT NOT NULL,
+                cantidad DECIMAL(10,2) NOT NULL,
+                precio_unitario DECIMAL(10,2) NOT NULL,
+                subtotal DECIMAL(10,2) NOT NULL,
+                tipo_item VARCHAR(50),
+                
+                -- Referencias
+                servicio_id INTEGER,
+                producto_id INTEGER,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Hospitalización
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS hospitalizaciones (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                
+                -- Datos de hospitalización
+                fecha_ingreso DATE NOT NULL,
+                fecha_egreso DATE,
+                hora_ingreso TIME,
+                hora_egreso TIME,
+                motivo_ingreso TEXT NOT NULL,
+                diagnostico TEXT,
+                tratamiento TEXT,
+                estado VARCHAR(50) DEFAULT 'activa',
+                
+                -- Datos de facturación
+                costo_diario DECIMAL(10,2),
+                costo_total DECIMAL(10,2),
+                estado_pago VARCHAR(50) DEFAULT 'pendiente',
+                
+                -- Notas
+                notas TEXT,
+                notas_alta TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Procedimientos Hospitalarios
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS hospitalizacion_procedimientos (
+                id SERIAL PRIMARY KEY,
+                hospitalizacion_id INTEGER REFERENCES hospitalizaciones(id) ON DELETE CASCADE,
+                
+                -- Datos del procedimiento
+                fecha_hora TIMESTAMP NOT NULL,
+                tipo_procedimiento TEXT NOT NULL,
+                descripcion TEXT,
+                veterinario_responsable TEXT,
+                resultado TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Referidos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS referidos (
+                id SERIAL PRIMARY KEY,
+                veterinario_origen_id INTEGER REFERENCES veterinarios(id),
+                veterinario_destino_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                
+                -- Datos del referido
+                fecha_referido DATE NOT NULL,
+                motivo TEXT NOT NULL,
+                diagnostico_preliminar TEXT,
+                estado VARCHAR(50) DEFAULT 'pendiente',
+                
+                -- Seguimiento
+                fecha_respuesta DATE,
+                respuesta TEXT,
+                resultado TEXT,
+                
+                -- Notas
+                notas TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Integración con Laboratorios
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS laboratorios_integracion (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                nombre_laboratorio VARCHAR(200) NOT NULL,
+                tipo_laboratorio VARCHAR(100),
+                api_key TEXT,
+                api_endpoint TEXT,
+                estado VARCHAR(50) DEFAULT 'activo',
+                
+                -- Configuración
+                configuracion JSONB,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Resultados de Laboratorio
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS laboratorio_resultados (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                laboratorio_id INTEGER REFERENCES laboratorios_integracion(id),
+                analisis_id INTEGER REFERENCES analisis(id),
+                
+                -- Datos del resultado
+                fecha_solicitud DATE NOT NULL,
+                fecha_resultado DATE,
+                tipo_analisis TEXT NOT NULL,
+                estado VARCHAR(50) DEFAULT 'pendiente',
+                
+                -- Datos del resultado
+                resultados JSONB,
+                observaciones TEXT,
+                archivo_url TEXT,
+                referencia_externa TEXT,
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla de Recomendaciones de Productos (IA)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS recomendaciones_productos (
+                id SERIAL PRIMARY KEY,
+                veterinario_id INTEGER REFERENCES veterinarios(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                mascota_id INTEGER REFERENCES mascotas(id),
+                
+                -- Datos de la recomendación
+                fecha_generada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                productos_recomendados JSONB NOT NULL,
+                contexto TEXT,
+                tipo_situacion VARCHAR(100),
+                
+                -- Métricas
+                aceptada BOOLEAN,
+                productos_comprados JSONB,
+                monto_total DECIMAL(10,2),
+                
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Índices para nuevas tablas
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_citas_veterinario ON citas(veterinario_id);
+            CREATE INDEX IF NOT EXISTS idx_citas_cliente ON citas(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha);
+            CREATE INDEX IF NOT EXISTS idx_facturas_veterinario ON facturas(veterinario_id);
+            CREATE INDEX IF NOT EXISTS idx_facturas_cliente ON facturas(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado);
+            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_veterinario ON hospitalizaciones(veterinario_id);
+            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_mascota ON hospitalizaciones(mascota_id);
+            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_estado ON hospitalizaciones(estado);
+            CREATE INDEX IF NOT EXISTS idx_referidos_origen ON referidos(veterinario_origen_id);
+            CREATE INDEX IF NOT EXISTS idx_referidos_destino ON referidos(veterinario_destino_id);
+            CREATE INDEX IF NOT EXISTS idx_laboratorio_resultados_mascota ON laboratorio_resultados(mascota_id);
+            CREATE INDEX IF NOT EXISTS idx_recomendaciones_cliente ON recomendaciones_productos(cliente_id);
             CREATE INDEX IF NOT EXISTS idx_recordatorios_cliente ON recordatorios_renovacion(cliente_venta_id);
         `);
 
