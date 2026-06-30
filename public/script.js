@@ -173,24 +173,35 @@ function showSection(sectionName) {
 async function loadDashboardData() {
     try {
         const token = localStorage.getItem('token');
-        const [clientesRes, mascotasRes] = await Promise.all([
+        const [clientesRes, mascotasRes, consultasRes, analisisRes] = await Promise.all([
             fetch('/api/clientes', {
                 headers: { 'Authorization': `Bearer ${token}` }
             }),
             fetch('/api/mascotas', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch('/api/consultas', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch('/api/analisis', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
         ]);
         
         const clientesData = await clientesRes.json();
         const mascotasData = await mascotasRes.json();
+        const consultasData = await consultasRes.json();
+        const analisisData = await analisisRes.json();
         
         document.getElementById('total-clientes').textContent = clientesData.length;
         document.getElementById('total-mascotas').textContent = mascotasData.length;
         
-        // Aquí podrías agregar más estadísticas
-        document.getElementById('total-consultas').textContent = '0';
-        document.getElementById('total-analisis').textContent = '0';
+        // Calcular consultas de hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        const consultasHoy = consultasData.filter(c => c.fecha_consulta === hoy).length;
+        document.getElementById('total-consultas').textContent = consultasHoy;
+        
+        document.getElementById('total-analisis').textContent = analisisData.length;
         
     } catch (error) {
         console.error('Error cargando dashboard:', error);
