@@ -1140,23 +1140,62 @@ async function initializeDatabase() {
             )
         `);
 
-        // Índices para nuevas tablas
-        await pool.query(`
-            CREATE INDEX IF NOT EXISTS idx_citas_veterinario ON citas(veterinario_id);
-            CREATE INDEX IF NOT EXISTS idx_citas_cliente ON citas(cliente_id);
-            CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha);
-            CREATE INDEX IF NOT EXISTS idx_facturas_veterinario ON facturas(veterinario_id);
-            CREATE INDEX IF NOT EXISTS idx_facturas_cliente ON facturas(cliente_id);
-            CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado);
-            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_veterinario ON hospitalizaciones(veterinario_id);
-            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_mascota ON hospitalizaciones(mascota_id);
-            CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_estado ON hospitalizaciones(estado);
-            CREATE INDEX IF NOT EXISTS idx_referidos_origen ON referidos(veterinario_origen_id);
-            CREATE INDEX IF NOT EXISTS idx_referidos_destino ON referidos(veterinario_destino_id);
-            CREATE INDEX IF NOT EXISTS idx_laboratorio_resultados_mascota ON laboratorio_resultados(mascota_id);
-            CREATE INDEX IF NOT EXISTS idx_recomendaciones_cliente ON recomendaciones_productos(cliente_id);
-            CREATE INDEX IF NOT EXISTS idx_recordatorios_cliente ON recordatorios_renovacion(cliente_venta_id);
-        `);
+        // Índices para nuevas tablas (solo si las columnas existen)
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_citas_veterinario ON citas(veterinario_id)`);
+        } catch (e) { console.log('⚠️  Índice citas_veterinario no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_citas_cliente ON citas(cliente_id)`);
+        } catch (e) { console.log('⚠️  Índice citas_cliente no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha)`);
+        } catch (e) { console.log('⚠️  Índice citas_fecha no creado (columna fecha no existe):', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_facturas_veterinario ON facturas(veterinario_id)`);
+        } catch (e) { console.log('⚠️  Índice facturas_veterinario no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_facturas_cliente ON facturas(cliente_id)`);
+        } catch (e) { console.log('⚠️  Índice facturas_cliente no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado)`);
+        } catch (e) { console.log('⚠️  Índice facturas_estado no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_veterinario ON hospitalizaciones(veterinario_id)`);
+        } catch (e) { console.log('⚠️  Índice hospitalizaciones_veterinario no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_mascota ON hospitalizaciones(mascota_id)`);
+        } catch (e) { console.log('⚠️  Índice hospitalizaciones_mascota no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_hospitalizaciones_estado ON hospitalizaciones(estado)`);
+        } catch (e) { console.log('⚠️  Índice hospitalizaciones_estado no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_referidos_origen ON referidos(veterinario_origen_id)`);
+        } catch (e) { console.log('⚠️  Índice referidos_origen no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_referidos_destino ON referidos(veterinario_destino_id)`);
+        } catch (e) { console.log('⚠️  Índice referidos_destino no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_laboratorio_resultados_mascota ON laboratorio_resultados(mascota_id)`);
+        } catch (e) { console.log('⚠️  Índice laboratorio_resultados_mascota no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_recomendaciones_cliente ON recomendaciones_productos(cliente_id)`);
+        } catch (e) { console.log('⚠️  Índice recomendaciones_cliente no creado:', e.message); }
+        
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_recordatorios_cliente ON recordatorios_renovacion(cliente_venta_id)`);
+        } catch (e) { console.log('⚠️  Índice recordatorios_cliente no creado:', e.message); }
 
         console.log('✅ Base de datos PostgreSQL inicializada correctamente');
 
