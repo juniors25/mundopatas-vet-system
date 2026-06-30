@@ -249,7 +249,6 @@ app.post('/api/login', async (req, res) => {
 
         res.json({
             message: 'Login exitoso',
-            trial_status: trialStatus,
             token,
             user: {
                 id: user.id,
@@ -262,10 +261,76 @@ app.post('/api/login', async (req, res) => {
                 tipo_cuenta: user.tipo_cuenta,
                 licencia_activa: user.licencia_activa,
                 fecha_fin_prueba: user.fecha_fin_prueba
-            }
+            },
+            trialStatus
         });
     } catch (error) {
         console.error('Error en login:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Endpoint para login de pacientes (clientes de veterinarias)
+app.post('/api/paciente/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // Buscar cliente por email
+        const clienteResult = await pool.query('SELECT * FROM clientes WHERE email = $1', [email]);
+        
+        if (clienteResult.rows.length === 0) {
+            return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+        }
+
+        const cliente = clienteResult.rows[0];
+        
+        // Verificar contraseña (si el cliente tiene contraseña asignada)
+        if (cliente.password_portal) {
+            const validPassword = await bcrypt.compare(password, cliente.password_portal);
+            if (!validPassword) {
+                return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+            }
+        } else {
+            // Si no tiene contraseña, verificar que el email coincida
+            if (!email || email !== cliente.email) {
+                return res.status(401).json({ error: 'Email no encontrado' });
+            }
+        }
+
+        // Obtener mascotas del cliente
+        const mascotasResult = await pool.query(
+            'SELECT m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.telefono, c.email as cliente_email FROM mascotas m LEFT JOIN clientes c ON m.cliente_id = c.id WHERE m.cliente_id = $1',
+            [cliente.id]
+        );
+
+        const mascotas = mascotasResult.rows.map(mascota => ({
+            id: mascota.id,
+            nombre: mascota.nombre,
+            especie: mascota.especie,
+            raza: mascota.raza,
+            edad: mascota.edad,
+            peso: mascota.peso,
+            color: mascota.color,
+            sexo: mascota.sexo,
+            fecha_registro: mascota.fecha_registro,
+            cliente_nombre: mascota.cliente_nombre,
+            cliente_apellido: mascota.cliente_apellido,
+            telefono: mascota.telefono,
+            email: mascota.cliente_email
+        }));
+
+        res.json({
+            cliente: {
+                id: cliente.id,
+                nombre: cliente.nombre,
+                apellido: cliente.apellido,
+                email: cliente.email,
+                telefono: cliente.telefono
+            },
+            mascotas: mascotas
+        });
+    } catch (error) {
+        console.error('Error en login paciente:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });

@@ -117,6 +117,32 @@ function showSection(sectionName) {
             case 'informes':
                 loadMascotasSelect('#informes-section');
                 break;
+            case 'citas':
+                loadClientesSelectForForms();
+                loadCitas();
+                break;
+            case 'facturacion':
+                loadClientesSelectForForms();
+                loadFacturas();
+                break;
+            case 'hospitalizacion':
+                loadClientesSelectForForms();
+                loadHospitalizaciones();
+                break;
+            case 'referidos':
+                loadClientesSelectForForms();
+                loadReferidos();
+                break;
+            case 'laboratorios':
+                loadMascotasSelect('#laboratorios-section');
+                loadLaboratorios();
+                break;
+            case 'recomendaciones':
+                loadClientesSelectForForms();
+                break;
+            case 'reportes':
+                cargarReportes();
+                break;
         }
     } else {
         // Si la sección no existe, mostrar mensaje o redirigir
@@ -1127,6 +1153,663 @@ function toggleConsultaForm() {
     }
 }
 
+// ==================== NUEVAS FUNCIONALIDADES ====================
+
+// Cargar clientes en selects de formularios nuevos
+async function loadClientesSelectForForms() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/clientes', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar clientes');
+        
+        const clientes = await response.json();
+        
+        // Citas
+        const citaCliente = document.getElementById('cita-cliente');
+        if (citaCliente) {
+            citaCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(cliente => {
+                citaCliente.innerHTML += `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`;
+            });
+        }
+        
+        // Facturación
+        const facturaCliente = document.getElementById('factura-cliente');
+        if (facturaCliente) {
+            facturaCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(cliente => {
+                facturaCliente.innerHTML += `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`;
+            });
+        }
+        
+        // Hospitalización
+        const hospCliente = document.getElementById('hospitalizacion-cliente');
+        if (hospCliente) {
+            hospCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(cliente => {
+                hospCliente.innerHTML += `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`;
+            });
+        }
+        
+        // Referidos
+        const refCliente = document.getElementById('referido-cliente');
+        if (refCliente) {
+            refCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(cliente => {
+                refCliente.innerHTML += `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`;
+            });
+        }
+        
+        // Recomendaciones
+        const recCliente = document.getElementById('rec-cliente');
+        if (recCliente) {
+            recCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(cliente => {
+                recCliente.innerHTML += `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// ==================== CITAS ====================
+
+async function loadCitas() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/citas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar citas');
+
+        const citas = await response.json();
+        const tbody = document.querySelector('#citas-table tbody');
+        tbody.innerHTML = '';
+
+        if (citas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No hay citas programadas</td></tr>';
+            return;
+        }
+
+        citas.forEach(cita => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${cita.fecha}</td>
+                    <td>${cita.hora}</td>
+                    <td>${cita.cliente_nombre} ${cita.cliente_apellido}</td>
+                    <td>${cita.mascota_nombre}</td>
+                    <td>${cita.motivo}</td>
+                    <td><span class="badge bg-${cita.estado === 'programada' ? 'primary' : 'secondary'}">${cita.estado}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="actualizarCita(${cita.id})">Actualizar</button>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        const tbody = document.querySelector('#citas-table tbody');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error al cargar citas</td></tr>';
+    }
+}
+
+async function crearCita() {
+    const clienteId = document.getElementById('cita-cliente').value;
+    const mascotaId = document.getElementById('cita-mascota').value;
+    const fecha = document.getElementById('cita-fecha').value;
+    const hora = document.getElementById('cita-hora').value;
+    const motivo = document.getElementById('cita-motivo').value;
+
+    if (!clienteId || !mascotaId || !fecha || !hora || !motivo) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/citas`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                mascota_id: mascotaId,
+                fecha,
+                hora,
+                motivo,
+                pago_obligatorio: true,
+                monto_pago: 5000
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al crear cita');
+
+        alert('Cita creada exitosamente');
+        document.getElementById('cita-form').reset();
+        loadCitas();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al crear cita');
+    }
+}
+
+async function actualizarCita(id) {
+    const estado = prompt('Estado (programada/completada/cancelada):');
+    if (!estado) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/citas/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ estado })
+        });
+
+        if (!response.ok) throw new Error('Error al actualizar cita');
+
+        alert('Cita actualizada');
+        loadCitas();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al actualizar cita');
+    }
+}
+
+// ==================== FACTURACIÓN ====================
+
+let facturaItemCount = 0;
+
+function addFacturaItem() {
+    facturaItemCount++;
+    const itemsDiv = document.getElementById('factura-items');
+    const newItem = document.createElement('div');
+    newItem.className = 'input-group mb-2';
+    newItem.id = `item-${facturaItemCount}`;
+    newItem.innerHTML = `
+        <input type="text" class="form-control" placeholder="Descripción" id="item-desc-${facturaItemCount}">
+        <input type="number" class="form-control" placeholder="Cant" id="item-cant-${facturaItemCount}" value="1">
+        <input type="number" class="form-control" placeholder="Precio" id="item-precio-${facturaItemCount}">
+        <button type="button" class="btn btn-outline-danger" onclick="removeItem(${facturaItemCount})">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    itemsDiv.appendChild(newItem);
+}
+
+function removeItem(id) {
+    const item = document.getElementById(`item-${id}`);
+    if (item) item.remove();
+}
+
+async function crearFactura() {
+    const clienteId = document.getElementById('factura-cliente').value;
+    const items = [];
+    
+    document.querySelectorAll('#factura-items .input-group').forEach((item, index) => {
+        const desc = item.querySelector(`input[id^="item-desc"]`).value;
+        const cant = parseInt(item.querySelector(`input[id^="item-cant"]`).value) || 1;
+        const precio = parseFloat(item.querySelector(`input[id^="item-precio"]`).value) || 0;
+        
+        if (desc && precio > 0) {
+            items.push({ descripcion: desc, cantidad: cant, precio_unitario: precio, tipo_item: 'servicio' });
+        }
+    });
+
+    if (!clienteId || items.length === 0) {
+        alert('Por favor selecciona un cliente y agrega al menos un item');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/facturas`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cliente_id: clienteId, items })
+        });
+
+        if (!response.ok) throw new Error('Error al crear factura');
+
+        alert('Factura creada exitosamente');
+        document.getElementById('factura-form').reset();
+        document.getElementById('factura-items').innerHTML = '';
+        facturaItemCount = 0;
+        addFacturaItem();
+        loadFacturas();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al crear factura');
+    }
+}
+
+async function loadFacturas() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/facturas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar facturas');
+
+        const facturas = await response.json();
+        const tbody = document.querySelector('#facturas-table tbody');
+        tbody.innerHTML = '';
+
+        if (facturas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay facturas registradas</td></tr>';
+            return;
+        }
+
+        facturas.forEach(factura => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${factura.numero_factura}</td>
+                    <td>${factura.fecha_emision}</td>
+                    <td>${factura.cliente_nombre} ${factura.cliente_apellido}</td>
+                    <td>$${factura.total.toFixed(2)}</td>
+                    <td><span class="badge bg-${factura.estado === 'pagada' ? 'success' : 'warning'}">${factura.estado}</span></td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        const tbody = document.querySelector('#facturas-table tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar facturas</td></tr>';
+    }
+}
+
+// ==================== HOSPITALIZACIÓN ====================
+
+async function crearHospitalizacion() {
+    const clienteId = document.getElementById('hospitalizacion-cliente').value;
+    const mascotaId = document.getElementById('hospitalizacion-mascota').value;
+    const fecha = document.getElementById('hospitalizacion-fecha').value;
+    const motivo = document.getElementById('hospitalizacion-motivo').value;
+    const costo = parseFloat(document.getElementById('hospitalizacion-costo').value);
+
+    if (!clienteId || !mascotaId || !fecha || !motivo || !costo) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/hospitalizaciones`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                mascota_id: mascotaId,
+                fecha_ingreso: fecha,
+                motivo_ingreso: motivo,
+                costo_diario: costo
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al crear hospitalización');
+
+        alert('Hospitalización registrada exitosamente');
+        document.getElementById('hospitalizacion-form').reset();
+        loadHospitalizaciones();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al crear hospitalización');
+    }
+}
+
+async function loadHospitalizaciones() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/hospitalizaciones`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar hospitalizaciones');
+
+        const hospitalizaciones = await response.json();
+        const tbody = document.querySelector('#hospitalizaciones-table tbody');
+        tbody.innerHTML = '';
+
+        if (hospitalizaciones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay pacientes hospitalizados</td></tr>';
+            return;
+        }
+
+        hospitalizaciones.forEach(h => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${h.fecha_ingreso}</td>
+                    <td>${h.cliente_nombre} ${h.cliente_apellido}</td>
+                    <td>${h.mascota_nombre}</td>
+                    <td>${h.motivo_ingreso}</td>
+                    <td><span class="badge bg-${h.estado === 'activa' ? 'danger' : 'success'}">${h.estado}</span></td>
+                    <td>
+                        ${h.estado === 'activa' ? `<button class="btn btn-sm btn-success" onclick="darAlta(${h.id})">Dar Alta</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        const tbody = document.querySelector('#hospitalizaciones-table tbody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al cargar hospitalizaciones</td></tr>';
+    }
+}
+
+async function darAlta(id) {
+    const notas = prompt('Notas de alta:');
+    if (!notas) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/hospitalizaciones/${id}/alta`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ notas_alta: notas, costo_total: 0 })
+        });
+
+        if (!response.ok) throw new Error('Error al dar de alta');
+
+        alert('Alta registrada');
+        loadHospitalizaciones();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al dar de alta');
+    }
+}
+
+// ==================== REFERIDOS ====================
+
+async function crearReferido() {
+    const clienteId = document.getElementById('referido-cliente').value;
+    const mascotaId = document.getElementById('referido-mascota').value;
+    const destinoId = document.getElementById('referido-destino').value;
+    const motivo = document.getElementById('referido-motivo').value;
+
+    if (!clienteId || !mascotaId || !destinoId || !motivo) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/referidos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                mascota_id: mascotaId,
+                veterinario_destino_id: destinoId,
+                motivo,
+                diagnostico_preliminar: ''
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al crear referido');
+
+        alert('Referido enviado exitosamente');
+        document.getElementById('referido-form').reset();
+        loadReferidos();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al crear referido');
+    }
+}
+
+async function loadReferidos() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/referidos/enviados`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar referidos');
+
+        const referidos = await response.json();
+        const tbody = document.querySelector('#referidos-table tbody');
+        tbody.innerHTML = '';
+
+        if (referidos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay referidos enviados</td></tr>';
+            return;
+        }
+
+        referidos.forEach(r => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${r.fecha_referido}</td>
+                    <td>${r.cliente_nombre} ${r.cliente_apellido}</td>
+                    <td>${r.mascota_nombre}</td>
+                    <td>${r.motivo}</td>
+                    <td>${r.veterinario_destino_nombre}</td>
+                    <td><span class="badge bg-${r.estado === 'pendiente' ? 'warning' : 'success'}">${r.estado}</span></td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        const tbody = document.querySelector('#referidos-table tbody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al cargar referidos</td></tr>';
+    }
+}
+
+// ==================== LABORATORIOS ====================
+
+async function solicitarAnalisis() {
+    const mascotaId = document.getElementById('laboratorio-mascota').value;
+    const laboratorioId = document.getElementById('laboratorio-lab').value;
+    const tipo = document.getElementById('laboratorio-tipo').value;
+
+    if (!mascotaId || !laboratorioId || !tipo) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/laboratorios/solicitar`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                mascota_id: mascotaId,
+                laboratorio_id: laboratorioId,
+                tipo_analisis: tipo
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al solicitar análisis');
+
+        alert('Análisis solicitado exitosamente');
+        document.getElementById('laboratorio-form').reset();
+        loadLaboratorios();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al solicitar análisis');
+    }
+}
+
+async function loadLaboratorios() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/laboratorios/integracion`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar laboratorios');
+
+        const laboratorios = await response.json();
+        const tbody = document.querySelector('#laboratorios-table tbody');
+        tbody.innerHTML = '';
+
+        if (laboratorios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay análisis solicitados</td></tr>';
+            return;
+        }
+
+        laboratorios.forEach(lab => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${lab.fecha_solicitud || new Date().toLocaleDateString()}</td>
+                    <td>${lab.mascota_nombre || 'N/A'}</td>
+                    <td>${lab.nombre_laboratorio}</td>
+                    <td>${lab.tipo_analisis}</td>
+                    <td><span class="badge bg-${lab.estado === 'activo' ? 'success' : 'secondary'}">${lab.estado || 'activo'}</span></td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        const tbody = document.querySelector('#laboratorios-table tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar laboratorios</td></tr>';
+    }
+}
+
+// ==================== RECOMENDACIONES IA ====================
+
+async function generarRecomendaciones() {
+    const clienteId = document.getElementById('rec-cliente').value;
+    const mascotaId = document.getElementById('rec-mascota').value;
+    const situacion = document.getElementById('rec-situacion').value;
+
+    if (!clienteId || !mascotaId || !situacion) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/recomendaciones/generar`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                mascota_id: mascotaId,
+                tipo_situacion: situacion
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al generar recomendaciones');
+
+        const rec = await response.json();
+        const productos = JSON.parse(rec.productos_recomendados);
+        
+        let html = '<h5>Productos Recomendados:</h5><ul class="list-group">';
+        productos.forEach(p => {
+            html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${p.nombre}</strong> - ${p.categoria}
+                        <br><small class="text-muted">Prioridad: ${p.prioridad}</small>
+                    </div>
+                    <span class="badge bg-${p.prioridad === 'alta' ? 'danger' : p.prioridad === 'media' ? 'warning' : 'info'}">${p.prioridad}</span>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        
+        document.getElementById('recomendaciones-result').innerHTML = html;
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al generar recomendaciones');
+    }
+}
+
+// ==================== REPORTES ====================
+
+async function cargarReportes() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${window.location.origin}/api/reportes/dashboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar reportes');
+
+        const datos = await response.json();
+        
+        document.getElementById('ingresos-mes').textContent = `$${parseFloat(datos.ingresos_mes || 0).toFixed(2)}`;
+        document.getElementById('consultas-mes').textContent = datos.consultas_mes || 0;
+        document.getElementById('citas-pendientes').textContent = datos.citas_pendientes || 0;
+        document.getElementById('stock-bajo').textContent = datos.stock_bajo || 0;
+        
+        console.log('Reportes cargados:', datos);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar reportes');
+    }
+}
+
+function exportarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Reporte - Mundo Patas', 20, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
+    
+    const ingresos = document.getElementById('ingresos-mes').textContent;
+    const consultas = document.getElementById('consultas-mes').textContent;
+    const citas = document.getElementById('citas-pendientes').textContent;
+    const stock = document.getElementById('stock-bajo').textContent;
+    
+    doc.setFontSize(14);
+    doc.text('Resumen del Mes', 20, 50);
+    
+    doc.setFontSize(12);
+    doc.text(`Ingresos del mes: ${ingresos}`, 20, 65);
+    doc.text(`Consultas realizadas: ${consultas}`, 20, 75);
+    doc.text(`Citas pendientes: ${citas}`, 20, 85);
+    doc.text(`Productos con stock bajo: ${stock}`, 20, 95);
+    
+    doc.save('reporte-mundopatas.pdf');
+}
+
+function exportarExcel() {
+    const datos = [
+        ['Métrica', 'Valor'],
+        ['Ingresos del mes', document.getElementById('ingresos-mes').textContent],
+        ['Consultas realizadas', document.getElementById('consultas-mes').textContent],
+        ['Citas pendientes', document.getElementById('citas-pendientes').textContent],
+        ['Productos con stock bajo', document.getElementById('stock-bajo').textContent],
+        ['Fecha', new Date().toLocaleDateString()]
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(datos);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+    XLSX.writeFile(wb, 'reporte-mundopatas.xlsx');
+}
+
 // Manejar envío del formulario de consulta
 document.addEventListener('DOMContentLoaded', function() {
     const consultaForm = document.getElementById('consulta-form');
@@ -1137,7 +1820,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(consultaForm);
             const consultaData = {};
             
-            // Convertir FormData a objeto
             for (let [key, value] of formData.entries()) {
                 consultaData[key] = value;
             }
@@ -1158,8 +1840,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.ok) {
                     alert('Consulta registrada exitosamente');
                     consultaForm.reset();
-                    toggleConsultaForm(); // Mostrar historial
-                    loadConsultas(); // Recargar consultas
+                    toggleConsultaForm();
+                    loadConsultas();
                 } else {
                     alert('Error al registrar consulta: ' + (result.error || 'Error desconocido'));
                 }

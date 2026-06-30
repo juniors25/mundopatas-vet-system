@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -56,42 +58,61 @@
                             <i class="fas fa-file-medical me-1"></i>Informes
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('citas')">
+                            <i class="fas fa-calendar-alt me-1"></i>Citas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('facturacion')">
+                            <i class="fas fa-file-invoice-dollar me-1"></i>Facturación
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('hospitalizacion')">
+                            <i class="fas fa-hospital me-1"></i>Hospitalización
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('referidos')">
+                            <i class="fas fa-share-alt me-1"></i>Referidos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('laboratorios')">
+                            <i class="fas fa-flask me-1"></i>Laboratorios
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('recomendaciones')">
+                            <i class="fas fa-robot me-1"></i>IA Recomendaciones
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('reportes')">
+                            <i class="fas fa-chart-bar me-1"></i>Reportes
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-plus-circle me-1"></i>Nuevas Funciones
+                            <i class="fas fa-cog me-1"></i>Configuración
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="showSection('citas')">
-                                <i class="fas fa-calendar-alt me-2"></i>Citas y Agenda
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showSection('facturacion')">
-                                <i class="fas fa-file-invoice-dollar me-2"></i>Facturación
-                            </a></li>
                             <li><a class="dropdown-item" href="/inventario.html">
-                                <i class="fas fa-boxes me-2"></i>Inventario con Código de Barras
+                                <i class="fas fa-boxes me-2"></i>Inventario
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showSection('notificaciones')">
-                                <i class="fas fa-bell me-2"></i>Notificaciones
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showSection('reportes')">
-                                <i class="fas fa-chart-bar me-2"></i>Reportes y Estadísticas
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/config-pagos.html">
-                                <i class="fas fa-credit-card me-2 text-success"></i>Configurar Métodos de Pago
+                                <i class="fas fa-credit-card me-2 text-success"></i>Métodos de Pago
                             </a></li>
                             <li><a class="dropdown-item" href="/config-servicios.html">
-                                <i class="fas fa-concierge-bell me-2 text-info"></i>Configurar Servicios
+                                <i class="fas fa-concierge-bell me-2 text-info"></i>Servicios
+                            </a></li>
+                            <li><a class="dropdown-item" href="/gestion-avanzada.html">
+                                <i class="fas fa-cogs me-2 text-primary"></i>Gestión Avanzada
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/gestion-avanzada.html">
-                                <i class="fas fa-cogs me-2 text-primary"></i>Gestión Avanzada (FAQ, Ubicación, Protocolos)
-                            </a></li>
                             <li><a class="dropdown-item" href="#" onclick="showLicenseModal()">
                                 <i class="fas fa-key me-2 text-warning"></i>Activar Licencia Premium
-                            </a></li>
-                            <li><a class="dropdown-item" href="/nuevas-funciones.html">
-                                <i class="fas fa-external-link-alt me-2"></i>Ver Todas las Funciones
                             </a></li>
                         </ul>
                     </li>
@@ -848,6 +869,476 @@
                 </div>
             </div>
         </div>
+
+        <!-- Citas Section -->
+        <div id="citas-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5><i class="fas fa-calendar-plus me-2"></i>Nueva Cita</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="cita-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" id="cita-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" id="cita-mascota" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Fecha</label>
+                                        <input type="date" class="form-control" id="cita-fecha" required>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Hora</label>
+                                        <input type="time" class="form-control" id="cita-hora" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Motivo</label>
+                                    <textarea class="form-control" id="cita-motivo" rows="2" required></textarea>
+                                </div>
+                                <button type="button" class="btn btn-primary w-100" onclick="crearCita()">
+                                    <i class="fas fa-plus me-1"></i>Agendar Cita
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-calendar-alt me-2"></i>Citas Programadas</h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadCitas()">
+                                <i class="fas fa-sync me-1"></i>Actualizar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="citas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Hora</th>
+                                            <th>Cliente</th>
+                                            <th>Mascota</th>
+                                            <th>Motivo</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="7" class="text-center text-muted">Cargando citas...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Facturación Section -->
+        <div id="facturacion-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5><i class="fas fa-file-invoice-dollar me-2"></i>Nueva Factura</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="factura-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" id="factura-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Items de Factura</label>
+                                    <div id="factura-items">
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" placeholder="Descripción" id="item-desc-0">
+                                            <input type="number" class="form-control" placeholder="Cant" id="item-cant-0" value="1">
+                                            <input type="number" class="form-control" placeholder="Precio" id="item-precio-0">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeItem(0)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addFacturaItem()">
+                                        <i class="fas fa-plus me-1"></i>Agregar Item
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-success w-100" onclick="crearFactura()">
+                                    <i class="fas fa-file-invoice me-1"></i>Generar Factura
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-file-invoice me-2"></i>Facturas Recientes</h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadFacturas()">
+                                <i class="fas fa-sync me-1"></i>Actualizar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="facturas-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>N° Factura</th>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th>Total</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="5" class="text-center text-muted">Cargando facturas...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hospitalización Section -->
+        <div id="hospitalizacion-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="fas fa-hospital me-2"></i>Nueva Hospitalización</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="hospitalizacion-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" id="hospitalizacion-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" id="hospitalizacion-mascota" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha Ingreso</label>
+                                    <input type="date" class="form-control" id="hospitalizacion-fecha" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Motivo</label>
+                                    <textarea class="form-control" id="hospitalizacion-motivo" rows="2" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Costo Diario</label>
+                                    <input type="number" class="form-control" id="hospitalizacion-costo" required>
+                                </div>
+                                <button type="button" class="btn btn-danger w-100" onclick="crearHospitalizacion()">
+                                    <i class="fas fa-plus me-1"></i>Registrar Ingreso
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-bed me-2"></i>Pacientes Hospitalizados</h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadHospitalizaciones()">
+                                <i class="fas fa-sync me-1"></i>Actualizar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="hospitalizaciones-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha Ingreso</th>
+                                            <th>Cliente</th>
+                                            <th>Mascota</th>
+                                            <th>Motivo</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="6" class="text-center text-muted">Cargando hospitalizaciones...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referidos Section -->
+        <div id="referidos-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5><i class="fas fa-share-alt me-2"></i>Nuevo Referido</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="referido-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" id="referido-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" id="referido-mascota" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Veterinario Destino</label>
+                                    <select class="form-select" id="referido-destino" required>
+                                        <option value="">Seleccionar veterinario...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Motivo</label>
+                                    <textarea class="form-control" id="referido-motivo" rows="2" required></textarea>
+                                </div>
+                                <button type="button" class="btn btn-info w-100" onclick="crearReferido()">
+                                    <i class="fas fa-paper-plane me-1"></i>Enviar Referido
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-share-alt me-2"></i>Referidos Enviados</h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadReferidos()">
+                                <i class="fas fa-sync me-1"></i>Actualizar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="referidos-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th>Mascota</th>
+                                            <th>Motivo</th>
+                                            <th>Destino</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="6" class="text-center text-muted">Cargando referidos...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Laboratorios Section -->
+        <div id="laboratorios-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5><i class="fas fa-flask me-2"></i>Solicitar Análisis</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="laboratorio-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" id="laboratorio-mascota" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Laboratorio</label>
+                                    <select class="form-select" id="laboratorio-lab" required>
+                                        <option value="">Seleccionar laboratorio...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tipo de Análisis</label>
+                                    <select class="form-select" id="laboratorio-tipo" required>
+                                        <option value="hemograma">Hemograma Completo</option>
+                                        <option value="bioquimica">Bioquímica</option>
+                                        <option value="orina">Análisis de Orina</option>
+                                        <option value="coproparasitario">Coproparasitario</option>
+                                        <option value="otro">Otro</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-warning w-100" onclick="solicitarAnalisis()">
+                                    <i class="fas fa-vial me-1"></i>Solicitar Análisis
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-vials me-2"></i>Análisis Solicitados</h5>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadLaboratorios()">
+                                <i class="fas fa-sync me-1"></i>Actualizar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="laboratorios-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Mascota</th>
+                                            <th>Laboratorio</th>
+                                            <th>Tipo</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="5" class="text-center text-muted">Cargando análisis...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recomendaciones IA Section -->
+        <div id="recomendaciones-section" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-purple text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <h5><i class="fas fa-robot me-2"></i>IA Recomendaciones</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="recomendaciones-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Cliente</label>
+                                    <select class="form-select" id="rec-cliente" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mascota</label>
+                                    <select class="form-select" id="rec-mascota" required>
+                                        <option value="">Seleccionar mascota...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Situación</label>
+                                    <select class="form-select" id="rec-situacion" required>
+                                        <option value="bienestar_general">Bienestar General</option>
+                                        <option value="recuperacion">Recuperación</option>
+                                        <option value="prevencion">Prevención</option>
+                                        <option value="nutricion">Nutrición Especial</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn w-100" onclick="generarRecomendaciones()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    <i class="fas fa-magic me-1"></i>Generar Recomendaciones
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h5><i class="fas fa-lightbulb me-2"></i>Productos Recomendados</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="recomendaciones-result">
+                                <p class="text-muted">Selecciona cliente y mascota para generar recomendaciones personalizadas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reportes Dashboard Section -->
+        <div id="reportes-section" class="content-section" style="display: none;">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card border-success">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2"><i class="fas fa-dollar-sign me-1"></i>Ingresos del Mes</h6>
+                            <h3 class="mb-0" id="ingresos-mes">$0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card border-primary">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2"><i class="fas fa-stethoscope me-1"></i>Consultas del Mes</h6>
+                            <h3 class="mb-0" id="consultas-mes">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card border-warning">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2"><i class="fas fa-calendar me-1"></i>Citas Pendientes</h6>
+                            <h3 class="mb-0" id="citas-pendientes">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card border-danger">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2"><i class="fas fa-box me-1"></i>Stock Bajo</h6>
+                            <h3 class="mb-0" id="stock-bajo">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Exportar Reportes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger" onclick="exportarPDF()">
+                                    <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+                                </button>
+                                <button class="btn btn-success" onclick="exportarExcel()">
+                                    <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap JS -->
@@ -904,13 +1395,81 @@
     
     <script src="script.js"></script>
     
+    <!-- Banner de Estado de Licencia -->
+    <div id="license-banner" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle me-2 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong id="license-title">Estado de Licencia</strong>
+                <p id="license-message" class="mb-0"></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+
     <!-- App Mode and Watermark -->
     <script>
+        // Función para verificar estado de licencia
+        async function checkLicenseStatus() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                
+                const response = await fetch('/api/license/status', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const banner = document.getElementById('license-banner');
+                    const title = document.getElementById('license-title');
+                    const message = document.getElementById('license-message');
+                    
+                    if (data.trial_status && data.trial_status.is_trial) {
+                        banner.classList.remove('d-none');
+                        banner.classList.remove('alert-danger');
+                        banner.classList.add('alert-warning');
+                        
+                        if (data.trial_status.trial_expired) {
+                            title.textContent = '⚠️ Período de Prueba Expirado';
+                            message.innerHTML = `
+                                Tu período de prueba de 15 días ha finalizado. 
+                                Para continuar usando el sistema, contacta al administrador:
+                                <strong>jjvserviciosinformaticos@gmail.com</strong>
+                            `;
+                        } else {
+                            title.textContent = '🎁 Período de Prueba Activo';
+                            message.innerHTML = `
+                                Tienes <strong>${data.trial_status.days_remaining} días</strong> restantes de prueba.
+                                El período finaliza el <strong>${new Date(data.trial_status.trial_end_date).toLocaleDateString()}</strong>.
+                            `;
+                        }
+                    } else if (data.needs_activation) {
+                        banner.classList.remove('d-none');
+                        banner.classList.remove('alert-warning');
+                        banner.classList.add('alert-danger');
+                        title.textContent = '🔒 Sistema No Activado';
+                        message.innerHTML = `
+                            Tu cuenta necesita activación. Contacta al administrador:
+                            <strong>jjvserviciosinformaticos@gmail.com</strong>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error verificando licencia:', error);
+            }
+        }
+        
         // Verificar modo de aplicación y mostrar watermark si es demo
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 const response = await fetch('/api/app-config');
                 const config = await response.json();
+                
+                // Verificar estado de licencia
+                await checkLicenseStatus();
                 
                 if (config.mode === 'demo') {
                     // Agregar watermark para versión demo
