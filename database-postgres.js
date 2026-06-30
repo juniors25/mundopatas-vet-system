@@ -897,6 +897,7 @@ async function initializeDatabase() {
             CREATE INDEX IF NOT EXISTS idx_mis_clientes_veterinario ON mis_clientes_ventas(veterinario_id);
             CREATE INDEX IF NOT EXISTS idx_mis_clientes_licencia ON mis_clientes_ventas(licencia_id);
             CREATE INDEX IF NOT EXISTS idx_historial_pagos_cliente ON historial_pagos_clientes(cliente_venta_id);
+        `);
 
         // ==================== TABLAS PARA NUEVAS FUNCIONALIDADES ====================
 
