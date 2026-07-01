@@ -911,6 +911,26 @@ app.put('/api/consultas/:id', authenticateToken, async (req, res) => {
 });
 
 // RUTAS DE ANÁLISIS
+
+// Obtener todos los análisis del veterinario
+app.get('/api/analisis', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT a.*, m.nombre as nombre_mascota, c.nombre as nombre_cliente, c.apellido as apellido_cliente
+            FROM analisis a
+            JOIN mascotas m ON a.mascota_id = m.id
+            JOIN clientes c ON a.cliente_id = c.id
+            WHERE a.veterinario_id = $1
+            ORDER BY a.fecha_analisis DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo análisis:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 app.post('/api/analisis', authenticateToken, upload.single('archivo'), async (req, res) => {
     const { mascota_id, tipo_analisis, resultados, observaciones } = req.body;
     const archivo_adjunto = req.file ? req.file.filename : null;
