@@ -196,9 +196,10 @@ async function loadDashboardData() {
         document.getElementById('total-clientes').textContent = clientesData.length;
         document.getElementById('total-mascotas').textContent = mascotasData.length;
         
-        // Calcular consultas de hoy
+        // Calcular consultas de hoy (el endpoint devuelve { success: true, consultas: [...] })
+        const consultasArray = consultasData.consultas || consultasData;
         const hoy = new Date().toISOString().split('T')[0];
-        const consultasHoy = consultasData.filter(c => c.fecha_consulta === hoy).length;
+        const consultasHoy = consultasArray.filter(c => c.fecha_consulta === hoy).length;
         document.getElementById('total-consultas').textContent = consultasHoy;
         
         document.getElementById('total-analisis').textContent = analisisData.length;
