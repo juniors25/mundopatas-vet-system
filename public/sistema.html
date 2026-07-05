@@ -1887,6 +1887,36 @@
             var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
                 return new bootstrap.Dropdown(dropdownToggleEl)
             });
+            
+            // Event listeners manuales para dropdowns como fallback
+            document.querySelectorAll('.dropdown-toggle').forEach(function(dropdownToggle) {
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    var dropdownMenu = this.nextElementSibling;
+                    var isOpen = dropdownMenu.classList.contains('show');
+                    
+                    // Cerrar todos los dropdowns
+                    document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                    
+                    // Abrir este dropdown si no estaba abierto
+                    if (!isOpen) {
+                        dropdownMenu.classList.add('show');
+                    }
+                });
+            });
+            
+            // Cerrar dropdowns al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                }
+            });
         });
     </script>
 </body>
