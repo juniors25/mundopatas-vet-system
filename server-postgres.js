@@ -4227,9 +4227,153 @@ app.listen(PORT, () => {
     console.log(`✅ Servidor PostgreSQL iniciado en puerto ${PORT}`);
     console.log(`📱 Accede a: http://localhost:${PORT}`);
     console.log(`🌐 Landing comercial: http://localhost:${PORT}/landing-comercial.html`);
-    console.log(`🤖 Bot automático: ${CRON_ENABLED ? 'HABILITADO (9:00 AM)' : 'DESHABILITADO'}`);
-    console.log(`═══════════════════════════════════════════════════════════`);
+    console.log(`🤖 Bot automático: ${CRON_ENABLED ? 'HABILITADO' : 'DESHABILITADO'}`);
+    console.log('═══════════════════════════════════════════════════════════');
     console.log('');
+});
+
+// ==================== LOGIN DE CLIENTES (PORTAL PACIENTES) ====================
+
+// Login de clientes (portal de pacientes)
+app.post('/api/paciente/login', async (req, res) => {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
+    
+    try {
+        // Buscar cliente por email
+        const result = await pool.query(`
+            SELECT c.*, v.nombre_veterinario, v.nombre_clinica, v.email as veterinario_email
+            FROM clientes c
+            JOIN veterinarios v ON c.veterinario_id = v.id
+            WHERE c.email = $1
+        `, [email]);
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+        }
+        
+        const cliente = result.rows[0];
+        
+        // Verificar si tiene password_portal
+        if (!cliente.password_portal) {
+            return res.status(401).json({ 
+                error: 'No tienes acceso al portal de clientes. Contacta a tu veterinaria.' 
+            });
+        }
+        
+        // Verificar password (comparación simple, en producción usar bcrypt)
+        if (cliente.password_portal !== password) {
+            return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+        }
+        
+        // Generar token JWT para el cliente
+        const token = jwt.sign(
+            { 
+                id: cliente.id, 
+                email: cliente.email, 
+                tipo: 'cliente',
+                veterinario_id: cliente.veterinario_id
+            }, 
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        
+        // Obtener mascotas del cliente
+        const mascotasResult = await pool.query(`
+            SELECT * FROM mascotas WHERE cliente_id = $1
+        `, [cliente.id]);
+        
+        res.json({
+            message: 'Login exitoso',
+            token,
+            cliente: {
+                id: cliente.id,
+                nombre: cliente.nombre,
+                apellido: cliente.apellido,
+                email: cliente.email,
+                telefono: cliente.telefono,
+                veterinario: {
+                    id: cliente.veterinario_id,
+                    nombre: cliente.nombre_veterinario,
+                    clinica: cliente.nombre_clinica,
+                    email: cliente.veterinario_email
+                }
+            },
+            mascotas: mascotasResult.rows
+        });
+    } catch (error) {
+        console.error('Error en login de cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener consultas del cliente autenticado
+app.get('/api/paciente/consultas', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Token requerido' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        if (decoded.tipo !== 'cliente') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+        
+        const result = await pool.query(`
+            SELECT c.*, m.nombre as nombre_mascota, m.especie, 
+                   v.nombre_veterinario, v.nombre_clinica
+            FROM consultas c
+            JOIN mascotas m ON c.mascota_id = m.id
+            JOIN veterinarios v ON c.veterinario_id = v.id
+            WHERE c.cliente_id = $1
+            ORDER BY c.fecha_consulta DESC
+        `, [decoded.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo consultas del cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener análisis del cliente autenticado
+app.get('/api/paciente/analisis', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Token requerido' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        if (decoded.tipo !== 'cliente') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+        
+        const result = await pool.query(`
+            SELECT a.*, m.nombre as nombre_mascota, m.especie,
+                   v.nombre_veterinario, v.nombre_clinica
+            FROM analisis a
+            JOIN mascotas m ON a.mascota_id = m.id
+            JOIN veterinarios v ON a.veterinario_id = v.id
+            WHERE a.cliente_id = $1
+            ORDER BY a.fecha_analisis DESC
+        `, [decoded.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo análisis del cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
 module.exports = app;
