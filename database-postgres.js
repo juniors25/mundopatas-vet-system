@@ -1150,8 +1150,8 @@ async function initializeDatabase() {
         } catch (e) { console.log('⚠️  Índice citas_cliente no creado:', e.message); }
         
         try {
-            await pool.query(`CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha)`);
-        } catch (e) { console.log('⚠️  Índice citas_fecha no creado (columna fecha no existe):', e.message); }
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_citas_fecha ON citas(fecha_consulta)`);
+        } catch (e) { console.log('⚠️  Índice citas_fecha no creado (columna fecha_consulta no existe):', e.message); }
         
         try {
             await pool.query(`CREATE INDEX IF NOT EXISTS idx_facturas_veterinario ON facturas(veterinario_id)`);
