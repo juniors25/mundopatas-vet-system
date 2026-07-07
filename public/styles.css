@@ -43,6 +43,50 @@ body {
     font-size: 0.8rem;
 }
 
+/* Responsive navbar para móvil */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background-color: #0d6efd;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+    
+    .navbar-nav {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .nav-item {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .nav-link {
+        padding: 0.75rem 1rem !important;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        width: 100%;
+        margin-top: 5px;
+        border: none;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .dropdown-item {
+        color: white;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+}
+
 /* Landing Page Styles */
 .landing-page {
     margin: 0;
