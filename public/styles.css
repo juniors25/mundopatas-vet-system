@@ -5,6 +5,44 @@ body {
     font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Navbar más compacto */
+.navbar {
+    padding: 0.5rem 1rem !important;
+}
+
+.navbar-brand {
+    font-size: 1.1rem !important;
+    font-weight: 600;
+}
+
+.nav-link {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.6rem !important;
+    white-space: nowrap;
+}
+
+.nav-link i {
+    font-size: 0.8rem !important;
+}
+
+.navbar-toggler {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Dropdown menu más compacto */
+.dropdown-menu {
+    font-size: 0.85rem;
+}
+
+.dropdown-item {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+}
+
+.dropdown-item i {
+    font-size: 0.8rem;
+}
+
 /* Landing Page Styles */
 .landing-page {
     margin: 0;
