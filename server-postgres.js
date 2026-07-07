@@ -3699,17 +3699,330 @@ app.delete('/api/admin/mis-clientes/ventas/:id', async (req, res) => {
 
 // ==================== SISTEMA DE LICENCIAS ====================
 
-// Middleware de autenticación de admin
-function authenticateAdmin(req, res, next) {
+// Middleware de autenticación de admin (JWT)
+async function authenticateAdmin(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (token !== 'admin-mundopatas-2024') {
-        return res.status(403).json({ error: 'Acceso denegado. Se requiere autenticación de administrador.' });
+    if (!token) {
+        return res.status(401).json({ error: 'Token de autenticación requerido' });
     }
     
-    next();
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Verificar que sea un administrador
+        const adminResult = await pool.query(
+            'SELECT * FROM administradores WHERE id = $1 AND activo = true',
+            [decoded.id]
+        );
+        
+        if (adminResult.rows.length === 0) {
+            return res.status(403).json({ error: 'Acceso denegado. Solo administradores.' });
+        }
+        
+        req.admin = adminResult.rows[0];
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: 'Token inválido' });
+    }
 }
+
+// Login de administrador
+app.post('/api/admin/login', async (req, res) => {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
+    
+    try {
+        const result = await pool.query(
+            'SELECT * FROM administradores WHERE email = $1 AND activo = true',
+            [email]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+        
+        const admin = result.rows[0];
+        const validPassword = await bcrypt.compare(password, admin.password);
+        
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+        
+        const token = jwt.sign(
+            { id: admin.id, email: admin.email, role: 'admin' },
+            JWT_SECRET,
+            { expiresIn: '8h' }
+        );
+        
+        res.json({
+            message: 'Login exitoso',
+            token,
+            admin: {
+                id: admin.id,
+                email: admin.email,
+                nombre: admin.nombre
+            }
+        });
+    } catch (error) {
+        console.error('Error en login admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== GESTIÓN DE CLIENTES (ADMIN) ====================
+
+// Crear cliente y generar licencia automáticamente
+app.post('/api/admin/clientes', authenticateAdmin, async (req, res) => {
+    const { 
+        nombre_completo, email, telefono, whatsapp, clinica_nombre, 
+        ciudad, provincia, plan, monto_pagado, metodo_pago, fecha_pago,
+        comprobante_numero, notas 
+    } = req.body;
+    
+    if (!nombre_completo || !email || !plan) {
+        return res.status(400).json({ error: 'Nombre, email y plan son requeridos' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 1. Crear el veterinario
+        const tempPassword = Math.random().toString(36).substring(2, 10);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        
+        const vetResult = await client.query(`
+            INSERT INTO veterinarios (
+                email, password, nombre_veterinario, nombre_veterinaria,
+                telefono, direccion, tipo_cuenta, licencia_activa, fecha_fin_prueba
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, NULL)
+            RETURNING *
+        `, [email, hashedPassword, nombre_completo, clinica_nombre, telefono, provincia, plan]);
+        
+        const veterinario = vetResult.rows[0];
+        
+        // 2. Generar licencia
+        const year = new Date().getFullYear();
+        const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const timestamp = Date.now().toString(36).toUpperCase();
+        const clave = `MUNDOPATAS-${year}-${random}-${timestamp}`;
+        
+        const fechaExpiracion = new Date();
+        fechaExpiracion.setFullYear(fechaExpiracion.getFullYear() + 1);
+        
+        const licenciaResult = await client.query(`
+            INSERT INTO licencias (clave, tipo, estado, veterinario_id, fecha_activacion, fecha_expiracion, activa)
+            VALUES ($1, $2, 'activa', $3, NOW(), $4, true)
+            RETURNING *
+        `, [clave, plan, veterinario.id, fechaExpiracion]);
+        
+        const licencia = licenciaResult.rows[0];
+        
+        // 3. Registrar venta en mis_clientes_ventas
+        const ventaResult = await client.query(`
+            INSERT INTO mis_clientes_ventas (
+                veterinario_id, licencia_id, nombre_completo, email, telefono,
+                whatsapp, clinica_nombre, ciudad, provincia, monto_pagado,
+                metodo_pago, fecha_pago, comprobante_numero, notas, estado_venta
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'completada')
+            RETURNING *
+        `, [
+            veterinario.id, licencia.id, nombre_completo, email, telefono,
+            whatsapp, clinica_nombre, ciudad, provincia, monto_pagado,
+            metodo_pago, fecha_pago, comprobante_numero, notas
+        ]);
+        
+        // 4. Registrar pago si existe
+        if (monto_pagado && fecha_pago) {
+            await client.query(`
+                INSERT INTO historial_pagos_clientes (
+                    cliente_venta_id, veterinario_id, monto, metodo_pago, fecha_pago,
+                    comprobante_numero, tipo, concepto
+                ) VALUES ($1, $2, $3, $4, $5, $6, 'inicial', 'Pago inicial del plan')
+            `, [ventaResult.rows[0].id, veterinario.id, monto_pagado, metodo_pago, fecha_pago, comprobante_numero]);
+        }
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            message: 'Cliente creado exitosamente',
+            cliente: {
+                id: veterinario.id,
+                nombre: nombre_completo,
+                email: email,
+                clinica: clinica_nombre,
+                plan: plan,
+                password_temporal: tempPassword
+            },
+            licencia: {
+                clave: clave,
+                tipo: plan,
+                fecha_expiracion: fechaExpiracion
+            }
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error creando cliente:', error);
+        
+        if (error.code === '23505') {
+            return res.status(400).json({ error: 'El email ya está registrado' });
+        }
+        
+        res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+        client.release();
+    }
+});
+
+// Listar todos los clientes (admin)
+app.get('/api/admin/clientes', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                v.id,
+                v.nombre_veterinario as nombre,
+                v.nombre_veterinaria as clinica,
+                v.email,
+                v.telefono,
+                v.direccion as provincia,
+                v.tipo_cuenta as plan,
+                v.licencia_activa,
+                v.created_at as fecha_registro,
+                l.clave as licencia_key,
+                l.fecha_expiracion as fecha_vencimiento,
+                l.estado as estado_licencia,
+                cv.monto_pagado,
+                cv.metodo_pago,
+                cv.fecha_pago,
+                cv.estado_venta
+            FROM veterinarios v
+            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.activa = true
+            LEFT JOIN mis_clientes_ventas cv ON cv.veterinario_id = v.id
+            WHERE v.tipo_cuenta != 'DEMO'
+            ORDER BY v.created_at DESC
+        `);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo clientes:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener detalle de cliente (admin)
+app.get('/api/admin/clientes/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                v.*,
+                l.clave as licencia_key,
+                l.fecha_expiracion as fecha_vencimiento,
+                l.estado as estado_licencia,
+                cv.*,
+                (SELECT COUNT(*) FROM clientes WHERE veterinario_id = v.id) as total_clientes,
+                (SELECT COUNT(*) FROM mascotas WHERE veterinario_id = v.id) as total_mascotas,
+                (SELECT COUNT(*) FROM consultas WHERE veterinario_id = v.id) as total_consultas
+            FROM veterinarios v
+            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.activa = true
+            LEFT JOIN mis_clientes_ventas cv ON cv.veterinario_id = v.id
+            WHERE v.id = $1
+        `, [req.params.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        
+        // Obtener historial de pagos
+        const pagosResult = await pool.query(`
+            SELECT * FROM historial_pagos_clientes
+            WHERE veterinario_id = $1
+            ORDER BY fecha_pago DESC
+        `, [req.params.id]);
+        
+        res.json({
+            cliente: result.rows[0],
+            pagos: pagosResult.rows
+        });
+    } catch (error) {
+        console.error('Error obteniendo cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar cliente (admin)
+app.put('/api/admin/clientes/:id', authenticateAdmin, async (req, res) => {
+    const { nombre_completo, clinica_nombre, telefono, provincia, plan, notas } = req.body;
+    
+    try {
+        const result = await pool.query(`
+            UPDATE veterinarios SET
+                nombre_veterinario = $1,
+                nombre_veterinaria = $2,
+                telefono = $3,
+                direccion = $4,
+                tipo_cuenta = $5
+            WHERE id = $6
+            RETURNING *
+        `, [nombre_completo, clinica_nombre, telefono, provincia, plan, req.params.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        
+        // Actualizar notas en mis_clientes_ventas
+        await pool.query(`
+            UPDATE mis_clientes_ventas SET notas = $1, updated_at = NOW()
+            WHERE veterinario_id = $2
+        `, [notas, req.params.id]);
+        
+        res.json({ message: 'Cliente actualizado exitosamente', cliente: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Registrar pago de cliente (admin)
+app.post('/api/admin/clientes/:id/pagos', authenticateAdmin, async (req, res) => {
+    const { monto, metodo_pago, fecha_pago, comprobante_numero, concepto, notas } = req.body;
+    
+    if (!monto || !metodo_pago || !fecha_pago) {
+        return res.status(400).json({ error: 'Monto, método de pago y fecha son requeridos' });
+    }
+    
+    try {
+        // Obtener cliente_venta_id
+        const ventaResult = await pool.query(
+            'SELECT id FROM mis_clientes_ventas WHERE veterinario_id = $1',
+            [req.params.id]
+        );
+        
+        if (ventaResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Venta no encontrada' });
+        }
+        
+        const clienteVentaId = ventaResult.rows[0].id;
+        
+        const result = await pool.query(`
+            INSERT INTO historial_pagos_clientes (
+                cliente_venta_id, veterinario_id, monto, metodo_pago, fecha_pago,
+                comprobante_numero, tipo, concepto, notas
+            ) VALUES ($1, $2, $3, $4, $5, $6, 'renovacion', $7, $8)
+            RETURNING *
+        `, [clienteVentaId, req.params.id, monto, metodo_pago, fecha_pago, comprobante_numero, concepto, notas]);
+        
+        res.json({ message: 'Pago registrado exitosamente', pago: result.rows[0] });
+    } catch (error) {
+        console.error('Error registrando pago:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 
 // Endpoint para generar licencias (ADMIN)
 app.post('/api/admin/licencias/generar', authenticateAdmin, async (req, res) => {

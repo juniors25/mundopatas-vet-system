@@ -806,6 +806,29 @@ async function initializeDatabase() {
 
         // ==================== TABLAS PARA CONTROL PERSONAL DE CLIENTES ====================
         
+        // Tabla de administradores del sistema
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS administradores (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(200) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                nombre VARCHAR(200),
+                activo BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Insertar administrador por defecto si no existe
+        const adminExists = await pool.query('SELECT id FROM administradores WHERE email = $1', ['admin@mundopatas.com']);
+        if (adminExists.rows.length === 0) {
+            const bcrypt = require('bcrypt');
+            const hashedPassword = await bcrypt.hash('MundoPatas2024Admin!', 10);
+            await pool.query(
+                'INSERT INTO administradores (email, password, nombre) VALUES ($1, $2, $3)',
+                ['admin@mundopatas.com', hashedPassword, 'Administrador Principal']
+            );
+        }
+
         // Tabla para registrar clientes y sus pagos (uso personal del administrador)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS mis_clientes_ventas (
