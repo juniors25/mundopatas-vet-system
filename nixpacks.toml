@@ -1,0 +1,12 @@
+[phases.build]
+cmds = ["npm install"]
+
+[phases.start]
+cmds = ["node server-postgres.js"]
+
+[static]
+# Include public folder for static files
+include = ["public/**", "*.js", "*.json", "*.toml"]
+
+[variables]
+NODE_ENV = "production"
