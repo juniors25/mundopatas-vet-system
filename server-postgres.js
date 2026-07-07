@@ -421,6 +421,76 @@ app.get('/api/clientes', authenticateToken, async (req, res) => {
     }
 });
 
+// Obtener cliente por ID
+app.get('/api/clientes/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM clientes WHERE id = $1 AND veterinario_id = $2', [req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar cliente
+app.put('/api/clientes/:id', authenticateToken, async (req, res) => {
+    const { nombre, apellido, email, telefono, direccion, password_portal } = req.body;
+    
+    try {
+        // Verificar permisos
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para editar este cliente' });
+        }
+
+        // Si se proporciona password_portal, hashearla
+        let hashedPassword = null;
+        if (password_portal) {
+            hashedPassword = await bcrypt.hash(password_portal, 10);
+        }
+
+        const result = await pool.query(
+            'UPDATE clientes SET nombre = $1, apellido = $2, email = $3, telefono = $4, direccion = $5, password_portal = COALESCE($6, password_portal) WHERE id = $7 RETURNING *',
+            [nombre, apellido, email, telefono, direccion, hashedPassword, req.params.id]
+        );
+
+        res.json({ message: 'Cliente actualizado exitosamente', cliente: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar cliente
+app.delete('/api/clientes/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const clienteCheck = await pool.query(
+            'SELECT id FROM clientes WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (clienteCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar este cliente' });
+        }
+
+        await pool.query('DELETE FROM clientes WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Cliente eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando cliente:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // RUTAS DE MASCOTAS
 app.post('/api/mascotas', authenticateToken, async (req, res) => {
     const { cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones } = req.body;
@@ -493,6 +563,86 @@ app.get('/api/mascotas', authenticateToken, async (req, res) => {
         
     } catch (error) {
         console.error('Error obteniendo mascotas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener mascota por ID
+app.get('/api/mascotas/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                m.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, 
+                c.telefono, c.email as cliente_email
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Mascota no encontrada' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo mascota:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar mascota
+app.put('/api/mascotas/:id', authenticateToken, async (req, res) => {
+    const { cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones, tiene_chip, numero_chip, tipo_alimento, marca_alimento, peso_bolsa_kg, fecha_inicio_bolsa, gramos_diarios } = req.body;
+    
+    try {
+        // Verificar permisos
+        const mascotaCheck = await pool.query(`
+            SELECT m.id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para editar esta mascota' });
+        }
+
+        const result = await pool.query(
+            `UPDATE mascotas SET 
+                cliente_id = $1, nombre = $2, especie = $3, raza = $4, edad = $5, 
+                peso = $6, pelaje = $7, sexo = $8, observaciones = $9, tiene_chip = $10, 
+                numero_chip = $11, tipo_alimento = $12, marca_alimento = $13, 
+                peso_bolsa_kg = $14, fecha_inicio_bolsa = $15, gramos_diarios = $16
+             WHERE id = $17 RETURNING *`,
+            [cliente_id, nombre, especie, raza, edad, peso, color, sexo, observaciones, tiene_chip, numero_chip, tipo_alimento, marca_alimento, peso_bolsa_kg, fecha_inicio_bolsa, gramos_diarios, req.params.id]
+        );
+
+        res.json({ message: 'Mascota actualizada exitosamente', mascota: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando mascota:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar mascota
+app.delete('/api/mascotas/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const mascotaCheck = await pool.query(`
+            SELECT m.id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta mascota' });
+        }
+
+        await pool.query('DELETE FROM mascotas WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Mascota eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando mascota:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -910,6 +1060,28 @@ app.put('/api/consultas/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Eliminar consulta
+app.delete('/api/consultas/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const consultaCheck = await pool.query(`
+            SELECT c.id 
+            FROM consultas c
+            WHERE c.id = $1 AND c.veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (consultaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta consulta' });
+        }
+
+        await pool.query('DELETE FROM consultas WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Consulta eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando consulta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // RUTAS DE ANÁLISIS
 
 // Obtener todos los análisis del veterinario
@@ -980,6 +1152,176 @@ app.get('/api/analisis/:mascotaId', authenticateToken, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('Error obteniendo análisis:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar análisis
+app.put('/api/analisis/:id', authenticateToken, async (req, res) => {
+    const { tipo_analisis, fecha_analisis, resultados, observaciones } = req.body;
+    
+    try {
+        // Verificar permisos
+        const analisisCheck = await pool.query(
+            'SELECT id FROM analisis WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (analisisCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para editar este análisis' });
+        }
+
+        const result = await pool.query(
+            'UPDATE analisis SET tipo_analisis = $1, fecha_analisis = $2, resultados = $3, observaciones = $4 WHERE id = $5 RETURNING *',
+            [tipo_analisis, fecha_analisis, resultados, observaciones, req.params.id]
+        );
+
+        res.json({ message: 'Análisis actualizado exitosamente', analisis: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando análisis:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar análisis
+app.delete('/api/analisis/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const analisisCheck = await pool.query(
+            'SELECT id FROM analisis WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (analisisCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar este análisis' });
+        }
+
+        await pool.query('DELETE FROM analisis WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Análisis eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando análisis:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ==================== ENDPOINTS DE VACUNAS ====================
+
+// Crear vacuna
+app.post('/api/vacunas', authenticateToken, async (req, res) => {
+    const { mascota_id, nombre_vacuna, fecha_aplicacion, fecha_vencimiento, lote, observaciones } = req.body;
+    
+    try {
+        // Verificar que la mascota pertenece al veterinario
+        const mascotaCheck = await pool.query(`
+            SELECT m.id, m.cliente_id 
+            FROM mascotas m 
+            JOIN clientes c ON m.cliente_id = c.id 
+            WHERE m.id = $1 AND c.veterinario_id = $2
+        `, [mascota_id, req.user.id]);
+        
+        if (mascotaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para agregar vacunas a esta mascota' });
+        }
+
+        const cliente_id = mascotaCheck.rows[0].cliente_id;
+
+        const result = await pool.query(
+            'INSERT INTO vacunas (veterinario_id, cliente_id, mascota_id, nombre_vacuna, fecha_aplicacion, fecha_vencimiento, lote, observaciones) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, cliente_id, mascota_id, nombre_vacuna, fecha_aplicacion, fecha_vencimiento, lote, observaciones]
+        );
+
+        res.json({ message: 'Vacuna registrada exitosamente', vacuna: result.rows[0] });
+    } catch (error) {
+        console.error('Error registrando vacuna:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener todas las vacunas del veterinario
+app.get('/api/vacunas', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT v.*, m.nombre as mascota_nombre, m.especie, c.nombre as cliente_nombre, c.apellido as cliente_apellido
+            FROM vacunas v
+            JOIN mascotas m ON v.mascota_id = m.id
+            JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.veterinario_id = $1
+            ORDER BY v.fecha_aplicacion DESC
+        `, [req.user.id]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo vacunas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Obtener vacuna por ID
+app.get('/api/vacunas/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT v.*, m.nombre as mascota_nombre, m.especie, c.nombre as cliente_nombre, c.apellido as cliente_apellido
+            FROM vacunas v
+            JOIN mascotas m ON v.mascota_id = m.id
+            JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.id = $1 AND v.veterinario_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Vacuna no encontrada' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error obteniendo vacuna:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Actualizar vacuna
+app.put('/api/vacunas/:id', authenticateToken, async (req, res) => {
+    const { nombre_vacuna, fecha_aplicacion, fecha_vencimiento, lote, observaciones } = req.body;
+    
+    try {
+        // Verificar permisos
+        const vacunaCheck = await pool.query(
+            'SELECT id FROM vacunas WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (vacunaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para editar esta vacuna' });
+        }
+
+        const result = await pool.query(
+            'UPDATE vacunas SET nombre_vacuna = $1, fecha_aplicacion = $2, fecha_vencimiento = $3, lote = $4, observaciones = $5 WHERE id = $6 RETURNING *',
+            [nombre_vacuna, fecha_aplicacion, fecha_vencimiento, lote, observaciones, req.params.id]
+        );
+
+        res.json({ message: 'Vacuna actualizada exitosamente', vacuna: result.rows[0] });
+    } catch (error) {
+        console.error('Error actualizando vacuna:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Eliminar vacuna
+app.delete('/api/vacunas/:id', authenticateToken, async (req, res) => {
+    try {
+        // Verificar permisos
+        const vacunaCheck = await pool.query(
+            'SELECT id FROM vacunas WHERE id = $1 AND veterinario_id = $2',
+            [req.params.id, req.user.id]
+        );
+        
+        if (vacunaCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta vacuna' });
+        }
+
+        await pool.query('DELETE FROM vacunas WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Vacuna eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando vacuna:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
