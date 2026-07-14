@@ -41,20 +41,42 @@
         }
         
         .btn-cta {
-            background: #ff6b6b;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-weight: 600;
+            padding: 18px 50px;
+            font-size: 1.3rem;
+            font-weight: 700;
             border-radius: 50px;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .btn-cta:hover {
-            background: #ff5252;
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+            background: linear-gradient(135deg, #ff5252 0%, #d63031 100%);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.5);
+        }
+        
+        .btn-cta-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid white;
+            padding: 18px 50px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-cta-secondary:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 255, 255, 0.3);
         }
         
         .features-section {
@@ -190,42 +212,20 @@
                     <h1 class="hero-title">MUNDO PATAS</h1>
                     <p class="hero-subtitle">El Sistema Veterinario Más Completo del Mercado</p>
                     <p class="lead mb-4">Gestiona tu clínica veterinaria con tecnología de vanguardia. Desde consultas hasta telemedicina, todo en una sola plataforma.</p>
-                    <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="#demo" class="btn btn-cta btn-lg">
-                            <i class="fas fa-play me-2"></i>Ver Demo Gratuito
+                    <div class="d-flex justify-content-center gap-4 flex-wrap mt-5">
+                        <a href="http://localhost:3000" class="btn btn-cta">
+                            <i class="fas fa-sign-in-alt me-2"></i>Ingresar al Sistema
                         </a>
-                        <a href="#precios" class="btn btn-outline-light btn-lg">
-                            <i class="fas fa-rocket me-2"></i>Empezar Ahora
+                        <a href="#precios" class="btn btn-cta-secondary">
+                            <i class="fas fa-rocket me-2"></i>Ver Planes
                         </a>
                     </div>
+                    <p class="mt-4 opacity-75"><small><i class="fas fa-clock me-1"></i>15 días de prueba gratuita • Sin compromiso</small></p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Stats Section -->
-    <section class="stats-section">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-md-3 mb-4">
-                    <div class="stat-number">NUEVO</div>
-                    <p>Sistema Recién Lanzado</p>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-number">PRIMERO</div>
-                    <p>Tu Feedback Moldea el Producto</p>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-number">ESPECIAL</div>
-                    <p>Condiciones Exclusivas</p>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-number">24/7</div>
-                    <p>Soporte Técnico</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Features Section -->
     <section id="funcionalidades" class="features-section">
