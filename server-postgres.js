@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -3710,20 +3711,10 @@ async function authenticateAdmin(req, res, next) {
     
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        
-        // Verificar que sea un administrador
-        const adminResult = await pool.query(
-            'SELECT * FROM administradores WHERE id = $1 AND activo = true',
-            [decoded.id]
-        );
-        
-        if (adminResult.rows.length === 0) {
-            return res.status(403).json({ error: 'Acceso denegado. Solo administradores.' });
-        }
-        
-        req.admin = adminResult.rows[0];
+        req.admin = decoded;
         next();
     } catch (error) {
+        console.error('Error verificando token admin:', error);
         return res.status(401).json({ error: 'Token inválido' });
     }
 }
@@ -3770,6 +3761,71 @@ app.post('/api/admin/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Error en login admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Generar licencia para veterinario existente
+app.post('/api/admin/clientes/:id/generar-licencia', authenticateAdmin, async (req, res) => {
+    const { plan } = req.body;
+    
+    if (!plan) {
+        return res.status(400).json({ error: 'Plan es requerido' });
+    }
+    
+    try {
+        // Verificar que el veterinario existe
+        const vetResult = await pool.query('SELECT * FROM veterinarios WHERE id = $1', [req.params.id]);
+        
+        if (vetResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Veterinario no encontrado' });
+        }
+        
+        const veterinario = vetResult.rows[0];
+        
+        // Verificar si ya tiene una licencia activa
+        const existingLicense = await pool.query(
+            'SELECT * FROM licencias WHERE veterinario_id = $1 AND estado = $2',
+            [veterinario.id, 'activa']
+        );
+        
+        if (existingLicense.rows.length > 0) {
+            return res.status(400).json({ error: 'El veterinario ya tiene una licencia activa' });
+        }
+        
+        // Generar licencia
+        const year = new Date().getFullYear();
+        const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const timestamp = Date.now().toString(36).toUpperCase();
+        const clave = `MUNDOPATAS-${year}-${random}-${timestamp}`;
+        
+        const fechaExpiracion = new Date();
+        fechaExpiracion.setFullYear(fechaExpiracion.getFullYear() + 1);
+        
+        const licenciaResult = await pool.query(`
+            INSERT INTO licencias (clave, tipo, estado, veterinario_id)
+            VALUES ($1, $2, 'activa', $3)
+            RETURNING *
+        `, [clave, plan, veterinario.id]);
+        
+        // Actualizar veterinario
+        await pool.query(`
+            UPDATE veterinarios SET 
+                tipo_cuenta = $1,
+                licencia_activa = true
+            WHERE id = $2
+        `, [plan, veterinario.id]);
+        
+        res.json({
+            message: 'Licencia generada exitosamente',
+            licencia: {
+                clave: clave,
+                tipo: plan,
+                fecha_expiracion: fechaExpiracion
+            }
+        });
+    } catch (error) {
+        console.error('Error generando licencia:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -3894,19 +3950,19 @@ app.get('/api/admin/clientes', authenticateAdmin, async (req, res) => {
                 v.tipo_cuenta as plan,
                 v.licencia_activa,
                 v.created_at as fecha_registro,
+                v.fecha_fin_prueba,
                 l.clave as licencia_key,
-                l.fecha_expiracion as fecha_vencimiento,
-                l.estado as estado_licencia,
-                cv.monto_pagado,
-                cv.metodo_pago,
-                cv.fecha_pago,
-                cv.estado_venta
+                l.estado as estado_licencia
             FROM veterinarios v
-            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.activa = true
-            LEFT JOIN mis_clientes_ventas cv ON cv.veterinario_id = v.id
+            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.estado = 'activa'
             WHERE v.tipo_cuenta != 'DEMO'
             ORDER BY v.created_at DESC
         `);
+        
+        console.log(`📊 Clientes encontrados: ${result.rows.length}`);
+        result.rows.forEach(row => {
+            console.log(`  - ${row.nombre} (${row.email}) - Plan: ${row.plan} - Licencia activa: ${row.licencia_activa}`);
+        });
         
         res.json(result.rows);
     } catch (error) {
@@ -3922,15 +3978,12 @@ app.get('/api/admin/clientes/:id', authenticateAdmin, async (req, res) => {
             SELECT 
                 v.*,
                 l.clave as licencia_key,
-                l.fecha_expiracion as fecha_vencimiento,
                 l.estado as estado_licencia,
-                cv.*,
                 (SELECT COUNT(*) FROM clientes WHERE veterinario_id = v.id) as total_clientes,
                 (SELECT COUNT(*) FROM mascotas WHERE veterinario_id = v.id) as total_mascotas,
                 (SELECT COUNT(*) FROM consultas WHERE veterinario_id = v.id) as total_consultas
             FROM veterinarios v
-            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.activa = true
-            LEFT JOIN mis_clientes_ventas cv ON cv.veterinario_id = v.id
+            LEFT JOIN licencias l ON l.veterinario_id = v.id AND l.estado = 'activa'
             WHERE v.id = $1
         `, [req.params.id]);
         

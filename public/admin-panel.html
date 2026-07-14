@@ -385,6 +385,9 @@
                     <!-- Detalles del cliente -->
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="generarLicencia()" id="btnGenerarLicencia">
+                        <i class="fas fa-key me-2"></i>Generar Licencia
+                    </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
@@ -451,6 +454,7 @@
         let clients = [];
         let authToken = null;
         let revenueChart;
+        let currentClientId = null;
         const API_BASE = window.location.origin;
 
         // Verificar si hay token guardado
@@ -733,6 +737,8 @@
 
         // Ver detalle de cliente
         async function viewClient(id) {
+            currentClientId = id;
+            
             try {
                 const response = await fetch(`${API_BASE}/api/admin/clientes/${id}`, {
                     headers: {
@@ -745,6 +751,14 @@
                 if (response.ok) {
                     const client = data.cliente;
                     const pagos = data.pagos;
+                    
+                    // Mostrar/ocultar botón de generar licencia según si ya tiene licencia
+                    const btnGenerar = document.getElementById('btnGenerarLicencia');
+                    if (client.licencia_key) {
+                        btnGenerar.style.display = 'none';
+                    } else {
+                        btnGenerar.style.display = 'inline-block';
+                    }
                     
                     const detailHtml = `
                         <div class="row">
@@ -817,6 +831,55 @@
             document.getElementById('paymentClientId').value = clientId;
             document.getElementById('paymentFecha').value = new Date().toISOString().split('T')[0];
             new bootstrap.Modal(document.getElementById('paymentModal')).show();
+        }
+
+        // Generar licencia para cliente existente
+        async function generarLicencia() {
+            if (!currentClientId) {
+                alert('No hay cliente seleccionado');
+                return;
+            }
+            
+            const plan = prompt('Selecciona el plan:\n1. BASICO\n2. PROFESIONAL\n3. PREMIUM\n\nIngresa el número del plan:');
+            
+            if (!plan) return;
+            
+            const planMap = { '1': 'BASICO', '2': 'PROFESIONAL', '3': 'PREMIUM' };
+            const selectedPlan = planMap[plan];
+            
+            if (!selectedPlan) {
+                alert('Plan inválido');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/clientes/${currentClientId}/generar-licencia`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plan: selectedPlan })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Licencia generada exitosamente!\n\nClave: ${data.licencia.clave}\nPlan: ${data.licencia.tipo}\nVence: ${new Date(data.licencia.fecha_expiracion).toLocaleDateString()}`);
+                    
+                    // Ocultar botón de generar licencia
+                    document.getElementById('btnGenerarLicencia').style.display = 'none';
+                    
+                    // Recargar detalle del cliente
+                    viewClient(currentClientId);
+                    loadClients();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error generando licencia:', error);
+                alert('Error al generar licencia');
+            }
         }
 
         // Guardar pago
